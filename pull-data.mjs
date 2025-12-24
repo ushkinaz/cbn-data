@@ -72,10 +72,7 @@ function postprocessPoJson(jsonData) {
   return json;
 }
 
-const forbiddenTags = [
-  "cdda-experimental-2021-07-09-1837", // this release had broken json
-  "cdda-experimental-2021-07-09-1719",
-];
+const forbiddenTags = [];
 
 /** @param {string | Buffer} zip */
 function glob(zip) {
@@ -105,12 +102,12 @@ export default async function run({ github, context, dryRun = false }) {
   console.log("Fetching release list...");
 
   const { data: releases } = await github.rest.repos.listReleases({
-    owner: "CleverRaven",
-    repo: "Cataclysm-DDA",
+    owner: "cataclysmbn",
+    repo: "Cataclysm-BN",
   });
 
   const latestRelease = releases.find((r) =>
-    r.tag_name.startsWith("cdda-experimental-"),
+    /^\d{4}-\d{2}-\d{2}/.test(r.tag_name),
   )?.tag_name;
 
   console.log(`Latest experimental: ${latestRelease}`);
@@ -210,8 +207,8 @@ export default async function run({ github, context, dryRun = false }) {
     console.log(`Fetching source...`);
 
     const { data: zip } = await github.rest.repos.downloadZipballArchive({
-      owner: "CleverRaven",
-      repo: "Cataclysm-DDA",
+      owner: "cataclysmbn",
+      repo: "Cataclysm-BN",
       ref: tag_name,
     });
 
@@ -277,62 +274,38 @@ export default async function run({ github, context, dryRun = false }) {
       await createBlob("data/latest.gz/all_mods.json", zlib.gzipSync(allModsJson));
     }
 
-    console.group("Downloading translations...");
+    console.group("Processing languages...");
 
-    const translationArtifacts = await github.rest.actions.listArtifactsForRepo({
-      owner: "CleverRaven",
-      repo: "Cataclysm-DDA",
-      name: "translations",
-      per_page: 100
-    });
 
-    const relevantTranslationArtifact = translationArtifacts.data.artifacts.find(a => a.workflow_run?.head_sha === release.target_commitish)
 
-    let langs = []
-    if (relevantTranslationArtifact) {
-      console.log("Found translations")
-
-      const { data: zip } = await github.rest.actions.downloadArtifact({
-        owner: "CleverRaven",
-        repo: "Cataclysm-DDA",
-        artifact_id: relevantTranslationArtifact.id,
-        archive_format: "zip"
-      });
-      // @ts-expect-error
-      const zBuf = Buffer.from(zip)
-      const globFn = glob(zBuf);
-      langs = await Promise.all(
-        [...globFn("lang/po/*.po")].map(async (f) => {
-          const lang = path.basename(f.name, ".po");
-          const json = postprocessPoJson(
-            po2json.parse(f.data()),
+    const langs = await Promise.all(
+      [...globFn("*/lang/po/*.po")].map(async (f) => {
+        const lang = path.basename(f.name, ".po");
+        // @ts-ignore
+        const json = postprocessPoJson(po2json.parse(f.data()));
+        const jsonStr = JSON.stringify(json);
+        await createBlob(`${pathBase}/lang/${lang}.json`, jsonStr);
+        if (tag_name === latestRelease)
+          await createBlob(
+            `data/latest.gz/lang/${lang}.json`,
+            zlib.gzipSync(jsonStr),
           );
-          const jsonStr = JSON.stringify(json);
-          await createBlob(`${pathBase}/lang/${lang}.json`, jsonStr);
+
+        // To support searching Chinese translations by pinyin
+        if (lang.startsWith("zh_")) {
+          const pinyinMap = toPinyin(data, json);
+          const pinyinStr = JSON.stringify(pinyinMap);
+          await createBlob(`${pathBase}/lang/${lang}_pinyin.json`, pinyinStr);
           if (tag_name === latestRelease)
             await createBlob(
-              `data/latest.gz/lang/${lang}.json`,
-              zlib.gzipSync(jsonStr),
+              `data/latest.gz/lang/${lang}_pinyin.json`,
+              zlib.gzipSync(pinyinStr),
             );
-
-          // To support searching Chinese translations by pinyin
-          if (lang.startsWith("zh_")) {
-            const pinyin = toPinyin(data, json);
-            const pinyinStr = JSON.stringify(pinyin);
-            await createBlob(`${pathBase}/lang/${lang}_pinyin.json`, pinyinStr);
-            if (tag_name === latestRelease)
-              await createBlob(
-                `data/latest.gz/lang/${lang}_pinyin.json`,
-                zlib.gzipSync(pinyinStr),
-              );
-          }
-          return lang;
-        }),
-      );
-      console.log(`Found ${Object.keys(langs).length} languages.`);
-    } else {
-      console.log(`No translation artifact found for ${release.target_commitish}`)
-    }
+        }
+        return lang;
+      }),
+    );
+    console.log(`Found ${langs.length} languages.`);
 
     console.groupEnd();
 

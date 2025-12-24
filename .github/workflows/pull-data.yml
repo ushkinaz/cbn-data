@@ -1,4 +1,4 @@
-name: Pull Cataclysm-DDA data
+name: Pull Cataclysm-BN data
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   pull-data:
-    name: Pull Cataclysm-DDA data
+    name: Pull Cataclysm-BN data
     runs-on: ubuntu-latest
     permissions:
       contents: write

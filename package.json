@@ -2,7 +2,9 @@
   "type": "module",
   "dependencies": {
     "gettext.js": "^1.2.0",
-    "pinyin": "^3.0.0-alpha.5"
+    "minimatch": "^5.0.0",
+    "pinyin": "^3.0.0-alpha.5",
+    "po2json": "^0.4.5"
   },
   "devDependencies": {
     "@types/github-script": "github:actions/github-script",
