@@ -7,7 +7,7 @@
     "po2json": "^0.4.5"
   },
   "devDependencies": {
-    "@types/github-script": "github:actions/github-script",
+    "@types/github-script": "github:actions/github-script#v8.0.0",
     "adm-zip": "^0.5.12",
     "octokit": "^4.0.2"
   },
