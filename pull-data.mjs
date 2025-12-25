@@ -330,8 +330,56 @@ export default async function run({ github, context, dryRun = false }) {
 
   builds.sort((a, b) => b.created_at.localeCompare(a.created_at));
 
-  console.log(`Writing ${builds.length} builds to builds.json...`);
-  await createBlob("builds.json", JSON.stringify(builds));
+  // Apply retention policy
+  const { kept: keptBuilds, removed: removedBuilds } = applyRetentionPolicy(
+    builds,
+    new Date(),
+  );
+
+  if (removedBuilds.length > 0) {
+    console.log(
+      `Retention policy: keeping ${keptBuilds.length} builds, removing ${removedBuilds.length} builds.`,
+    );
+
+    // Add deletion entries for existing builds that are being pruned
+    const removedExistingBuilds = removedBuilds.filter((r) =>
+      existingBuilds.some((eb) => eb.build_number === r.build_number),
+    );
+
+    for (const build of removedExistingBuilds) {
+      console.log(`Deleting artifacts for build ${build.build_number}...`);
+      const pathsToDelete = [
+        `data/${build.build_number}/all.json`,
+        `data/${build.build_number}/all_mods.json`,
+      ];
+      if (build.langs) {
+        for (const lang of build.langs) {
+          pathsToDelete.push(`data/${build.build_number}/lang/${lang}.json`);
+          if (lang.startsWith("zh_")) {
+            pathsToDelete.push(
+              `data/${build.build_number}/lang/${lang}_pinyin.json`,
+            );
+          }
+        }
+      }
+
+      for (const p of pathsToDelete) {
+        console.log(`...${p}`);
+        blobs.push({
+          path: p,
+          mode: "100644",
+          type: "blob",
+          sha: null,
+        });
+      }
+    }
+  }
+
+  // Update builds list reference to the kept ones for builds.json
+  const finalBuilds = keptBuilds;
+
+  console.log(`Writing ${finalBuilds.length} builds to builds.json...`);
+  await createBlob("builds.json", JSON.stringify(finalBuilds));
 
   const latestBuild = newBuilds.find((b) => b.build_number === latestRelease);
   if (latestBuild) {
@@ -382,7 +430,7 @@ export default async function run({ github, context, dryRun = false }) {
   console.log("Creating commit...");
   const { data: commit } = await github.rest.git.createCommit({
     ...context.repo,
-    message: `Update data for ${builds[0].build_number}`,
+    message: `Update data for ${finalBuilds[0].build_number}`,
     tree: tree.sha,
     author: {
       name: "HHG2C Update Bot",
@@ -397,6 +445,103 @@ export default async function run({ github, context, dryRun = false }) {
     sha: commit.sha,
     force: true,
   });
+}
+
+/**
+ * @param {any[]} builds
+ * @param {Date} now
+ */
+function applyRetentionPolicy(builds, now) {
+  const ONE_DAY = 1000 * 60 * 60 * 24;
+  const kept = [];
+  const removed = [];
+
+  // Group builds by day-age (0-indexed days ago from 'now')
+  const buildsByDay = new Map();
+
+  for (const b of builds) {
+    // 1. Keep all stable releases.
+    if (!b.prerelease) {
+      kept.push(b);
+      continue;
+    }
+
+    const ageMs = now.getTime() - new Date(b.created_at).getTime();
+    const ageDays = Math.floor(ageMs / ONE_DAY);
+
+    // We only care about positive age, though future builds (clock skew?) treated as day 0
+    const day = Math.max(0, ageDays);
+
+    if (!buildsByDay.has(day)) {
+      buildsByDay.set(day, []);
+    }
+    buildsByDay.get(day).push(b);
+  }
+
+  // Iterate over groups and apply rules
+  // Sort keys just for deterministic processing order, though not strictly needed
+  const days = [...buildsByDay.keys()].sort((a, b) => a - b);
+
+  for (const day of days) {
+    const dailyBuilds = buildsByDay.get(day);
+    // Sort descending by created_at (latest first) to pick "last build of the day"
+    dailyBuilds.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+    const latestInDay = dailyBuilds[0];
+    const rest = dailyBuilds.slice(1);
+
+    // Rule 2: In the last 30 days (0 <= day < 30), keep all builds.
+    if (day < 30) {
+      kept.push(...dailyBuilds);
+      continue;
+    }
+
+    // For older ranges, we only consider keeping the latest build of the day (if rule matches)
+    // All others in the same day are removed.
+
+    // Default to removing conflicting/extra builds of the day
+    removed.push(...rest);
+
+    // Now decide for 'latestInDay'
+
+    // Rule 3: 30 <= day < 90. Keep if day % 2 === 0.
+    if (day >= 30 && day < 90) {
+      if (day % 2 === 0) {
+        kept.push(latestInDay);
+      } else {
+        removed.push(latestInDay);
+      }
+      continue;
+    }
+
+    // Rule 4: 90 <= day < 210. Keep if day % 4 === 0.
+    if (day >= 90 && day < 210) {
+      if (day % 4 === 0) {
+        kept.push(latestInDay);
+      } else {
+        removed.push(latestInDay);
+      }
+      continue;
+    }
+
+    // Rule 5: 210 <= day < 450. Keep if day % 8 === 0.
+    if (day >= 210 && day < 450) {
+      if (day % 8 === 0) {
+        kept.push(latestInDay);
+      } else {
+        removed.push(latestInDay);
+      }
+      continue;
+    }
+
+    // Rule 6: Delete all builds older than 450 days.
+    if (day >= 450) {
+      removed.push(latestInDay);
+      continue;
+    }
+  }
+
+  return { kept, removed };
 }
 
 async function retry(fn, retries = 10) {
