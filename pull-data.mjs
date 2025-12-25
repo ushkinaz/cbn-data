@@ -433,8 +433,8 @@ export default async function run({ github, context, dryRun = false }) {
     message: `Update data for ${finalBuilds[0].build_number}`,
     tree: tree.sha,
     author: {
-      name: "HHG2C Update Bot",
-      email: "hhg2c@users.noreply.github.com",
+      name: "HHG2CBN Update Bot",
+      email: "hhg2cbn@users.noreply.github.com",
     },
   });
 
