@@ -76,20 +76,20 @@ const forbiddenTags = [];
 
 /** @param {string | Buffer} zip */
 function glob(zip) {
-  const z = new AdmZip(zip)
+  const z = new AdmZip(zip);
   /** @param {string} pattern */
   function* glob(pattern) {
-      for (const f of z.getEntries()) {
-          if (f.isDirectory) continue
-          if (minimatch(f.entryName, pattern)) {
-              yield {
-                  name: f.entryName.replaceAll("\\", "/").split("/").slice(1).join("/"),
-                  data: () => f.getData().toString("utf8"),
-              }
-          }
+    for (const f of z.getEntries()) {
+      if (f.isDirectory) continue;
+      if (minimatch(f.entryName, pattern)) {
+        yield {
+          name: f.entryName.replaceAll("\\", "/").split("/").slice(1).join("/"),
+          data: () => f.getData().toString("utf8"),
+        };
       }
+    }
   }
-  return glob
+  return glob;
 }
 
 /** @param {import('github-script').AsyncFunctionArguments & {dryRun?: boolean}} AsyncFunctionArguments */
@@ -213,29 +213,28 @@ export default async function run({ github, context, dryRun = false }) {
     });
 
     // @ts-ignore
-    const zBuf = Buffer.from(zip)
+    const zBuf = Buffer.from(zip);
     const globFn = glob(zBuf);
 
     console.group("Collating base JSON...");
     const data = [];
     for (const f of globFn("*/data/json/**/*.json")) {
-        const filename = f.name;
-        const objs = breakJSONIntoSingleObjects(f.data())
-        for (const { obj, start, end } of objs) {
-            obj.__filename = filename + `#L${start}-L${end}`;
-            data.push(obj);
-        }
+      const filename = f.name;
+      const objs = breakJSONIntoSingleObjects(f.data());
+      for (const { obj, start, end } of objs) {
+        obj.__filename = filename + `#L${start}-L${end}`;
+        data.push(obj);
+      }
     }
     console.log(`Found ${data.length} objects.`);
     console.groupEnd();
-
 
     console.group("Collating mods JSON...");
     /** @type {Record<string, { info: any, data: any[] }>} */
     const dataMods = {};
     for (const i of globFn("*/data/mods/*/modinfo.json")) {
       const modname = i.name.split("/")[2];
-      const modInfo = JSON.parse(i.data()).find(i => i.type === "MOD_INFO");
+      const modInfo = JSON.parse(i.data()).find((i) => i.type === "MOD_INFO");
       if (!modInfo || modInfo.obsolete) {
         continue;
       }
@@ -251,15 +250,18 @@ export default async function run({ github, context, dryRun = false }) {
         }
       }
     }
-    console.log(`Found ${Object.values(dataMods).reduce((acc, m) => acc + m.data.length, 0)} objects in ${Object.keys(dataMods).length} mods.`);
+    console.log(
+      `Found ${Object.values(dataMods).reduce((acc, m) => acc + m.data.length, 0)} objects in ${Object.keys(dataMods).length} mods.`,
+    );
     console.groupEnd();
-
 
     const allJson = JSON.stringify({
       build_number: tag_name,
       release,
       data,
-      mods: Object.fromEntries(Object.entries(dataMods).map(([name, mod]) => [name, mod.info])),
+      mods: Object.fromEntries(
+        Object.entries(dataMods).map(([name, mod]) => [name, mod.info]),
+      ),
     });
 
     const allModsJson = JSON.stringify(dataMods);
@@ -271,12 +273,13 @@ export default async function run({ github, context, dryRun = false }) {
     // TODO: these should go in a separate branch to reduce the total size of the main branch
     if (tag_name === latestRelease) {
       await createBlob("data/latest.gz/all.json", zlib.gzipSync(allJson));
-      await createBlob("data/latest.gz/all_mods.json", zlib.gzipSync(allModsJson));
+      await createBlob(
+        "data/latest.gz/all_mods.json",
+        zlib.gzipSync(allModsJson),
+      );
     }
 
     console.group("Processing languages...");
-
-
 
     const langs = await Promise.all(
       [...globFn("*/lang/po/*.po")].map(async (f) => {
