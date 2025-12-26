@@ -87,31 +87,22 @@ export default async function run({ github, context, dryRun = false }) {
     return blob;
   }
 
+  const pathsToDelete = new Set();
   for (const build of removedBuilds) {
-    console.log(`Deleting artifacts for build ${build.build_number}...`);
-    const pathsToDelete = [
-      `data/${build.build_number}/all.json`,
-      `data/${build.build_number}/all_mods.json`,
-    ];
+    console.log(
+      `Marking artifacts for deletion for build ${build.build_number}...`,
+    );
+    pathsToDelete.add(`data/${build.build_number}/all.json`);
+    pathsToDelete.add(`data/${build.build_number}/all_mods.json`);
     if (build.langs) {
       for (const lang of build.langs) {
-        pathsToDelete.push(`data/${build.build_number}/lang/${lang}.json`);
+        pathsToDelete.add(`data/${build.build_number}/lang/${lang}.json`);
         if (lang.startsWith("zh_")) {
-          pathsToDelete.push(
+          pathsToDelete.add(
             `data/${build.build_number}/lang/${lang}_pinyin.json`,
           );
         }
       }
-    }
-
-    for (const p of pathsToDelete) {
-      console.log(`...${p}`);
-      blobs.push({
-        path: p,
-        mode: "100644",
-        type: "blob",
-        sha: null,
-      });
     }
   }
 
@@ -123,16 +114,37 @@ export default async function run({ github, context, dryRun = false }) {
     return;
   }
 
-  console.log("Creating tree...");
+  console.log("Fetching full tree...");
   const { data: baseTree } = await github.rest.git.getTree({
     ...context.repo,
     tree_sha: baseCommit.commit.tree.sha,
+    recursive: "true",
   });
 
+  const newBlobsPaths = new Set(blobs.map((b) => b.path));
+
+  // Filter out deleted paths and anything we're about to replace
+  const keptTreeItems = baseTree.tree
+    .filter((item) => {
+      // Only keep blobs (files), ignore directories as they are inferred
+      if (item.type !== "blob" || !item.path) return false;
+      if (pathsToDelete.has(item.path)) return false;
+      if (newBlobsPaths.has(item.path)) return false;
+      return true;
+    })
+    .map((item) => ({
+      path: /** @type {string} */ (item.path),
+      mode: /** @type {"100644" | "100755" | "040000" | "160000" | "120000"} */ (
+        item.mode
+      ),
+      type: /** @type {"blob" | "commit" | "tree"} */ (item.type),
+      sha: item.sha,
+    }));
+
+  console.log("Creating tree...");
   const { data: tree } = await github.rest.git.createTree({
     ...context.repo,
-    tree: blobs,
-    base_tree: baseTree.sha,
+    tree: [...keptTreeItems, ...blobs],
   });
 
   console.log("Creating commit...");
