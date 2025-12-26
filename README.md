@@ -2,6 +2,10 @@
 
 This repo mirrors the JSON and translation data from nightly and release versions of [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Cataclysm-BN) for use in other projects, most notably the [The Hitchhiker's Guide to the Cataclysm: Bright Nights](https://cbn-guide.pages.dev/). The data is updated automatically every 12 hours.
 
+## Status
+[![Pull Cataclysm-BN data](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml/badge.svg?branch=action)](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml)
+[![Prune Old Data](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml/badge.svg?branch=action)](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml)
+
 ## Usage
 
 The data is committed to this repository in the `main` branch, while the code for updating the data is in the `action` branch (i.e. this one).
@@ -58,5 +62,5 @@ To run the update script locally, you'll need to have Node.js installed. Then yo
 
 ```
 yarn
-node .
+node pull-data-launcher.js
 ```
