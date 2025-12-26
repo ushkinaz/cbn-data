@@ -125,7 +125,7 @@ export default async function run({ github, context, dryRun = false }) {
     tree: tree.sha,
     author: {
       name: "HHG2CBN Update Bot",
-      email: "hhg2cbn@users.noreply.github.com",
+      email: "hhg2cbn@users.nooreply.github.com",
     },
     parents: [baseCommit.sha],
   });
