@@ -107,30 +107,42 @@ export default async function run({ github, context, dryRun = false }) {
   }
 
   console.log(`Writing ${keptBuilds.length} builds to builds.json...`);
-  await createBlob("builds.json", JSON.stringify(keptBuilds));
+  const buildsBlob = await createBlob(
+    "builds.json",
+    JSON.stringify(keptBuilds),
+  );
 
   if (dryRun) {
     console.log("(DRY RUN) skipping commit and push.");
     return;
   }
 
-  console.log("Fetching full tree...");
+  console.log("Fetching root tree...");
   const { data: baseTree } = await github.rest.git.getTree({
     ...context.repo,
     tree_sha: baseCommit.commit.tree.sha,
-    recursive: "true",
   });
 
-  const newBlobsPaths = new Set(blobs.map((b) => b.path));
+  const dataEntry = baseTree.tree.find((item) => item.path === "data");
+  if (!dataEntry) {
+    throw new Error("Could not find 'data' directory in root tree");
+  }
 
-  // Filter out deleted paths and anything we're about to replace
-  const keptTreeItems = baseTree.tree
+  console.log("Fetching 'data' tree...");
+  const { data: dataTree } = await github.rest.git.getTree({
+    ...context.repo,
+    tree_sha: dataEntry.sha,
+  });
+
+  const removedBuildNumbers = new Set(
+    removedBuilds.map((b) => String(b.build_number)),
+  );
+
+  console.log("Filtering 'data' tree...");
+  const keptDataItems = dataTree.tree
     .filter((item) => {
-      // Only keep blobs (files), ignore directories as they are inferred
-      if (item.type !== "blob" || !item.path) return false;
-      if (pathsToDelete.has(item.path)) return false;
-      if (newBlobsPaths.has(item.path)) return false;
-      return true;
+      // item.path is the filename/dirname within 'data/'
+      return item.path && !removedBuildNumbers.has(item.path);
     })
     .map((item) => ({
       path: /** @type {string} */ (item.path),
@@ -141,10 +153,30 @@ export default async function run({ github, context, dryRun = false }) {
       sha: item.sha,
     }));
 
-  console.log("Creating tree...");
+  console.log("Creating new 'data' tree...");
+  const { data: newDataTree } = await github.rest.git.createTree({
+    ...context.repo,
+    tree: keptDataItems,
+  });
+
+  console.log("Creating new root tree...");
   const { data: tree } = await github.rest.git.createTree({
     ...context.repo,
-    tree: [...keptTreeItems, ...blobs],
+    base_tree: baseTree.sha,
+    tree: [
+      {
+        path: "data",
+        mode: "040000",
+        type: "tree",
+        sha: newDataTree.sha,
+      },
+      {
+        path: "builds.json",
+        mode: "100644",
+        type: "blob",
+        sha: buildsBlob.data.sha,
+      },
+    ],
   });
 
   console.log("Creating commit...");
@@ -154,7 +186,7 @@ export default async function run({ github, context, dryRun = false }) {
     tree: tree.sha,
     author: {
       name: "HHG2CBN Update Bot",
-      email: "hhg2cbn@users.noreply.github.com",
+      email: "hhg2cbn@users.noreply.github.com",
     },
     parents: [baseCommit.sha],
   });
