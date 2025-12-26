@@ -4,7 +4,7 @@ import minimatch from "minimatch";
 import po2json from "po2json";
 import zlib from "zlib";
 import path from "path";
-
+import { GitHubHelper } from "./lib.mjs";
 import { toPinyin } from "./pinyin.mjs";
 
 function breakJSONIntoSingleObjects(str) {
@@ -94,6 +94,7 @@ function glob(zip) {
 
 /** @param {import('github-script').AsyncFunctionArguments & {dryRun?: boolean}} AsyncFunctionArguments */
 export default async function run({ github, context, dryRun = false }) {
+  const helper = new GitHubHelper({ github, context, dryRun });
   if (dryRun) {
     console.log("(DRY RUN) No changes will be made to the repository.");
   }
@@ -112,84 +113,8 @@ export default async function run({ github, context, dryRun = false }) {
 
   console.log(`Latest experimental: ${latestRelease}`);
 
-  const blobs = [];
-  /** @type {'100644'} */
-  const mode = "100644";
-  /** @type {'blob'} */
-  const type = "blob";
-
-  /**
-   * @param {string | Buffer} content
-   */
-  async function uploadBlob(content) {
-    if (dryRun) return { data: { sha: "dry-run-sha" } };
-    return typeof content === "string"
-      ? await retry(() =>
-          github.rest.git.createBlob({
-            ...context.repo,
-            content,
-            encoding: "utf-8",
-          }),
-        )
-      : await retry(() =>
-          github.rest.git.createBlob({
-            ...context.repo,
-            content: content.toString("base64"),
-            encoding: "base64",
-          }),
-        );
-  }
-
-  /**
-   * Upload a blob to GitHub and save it in our blob list for later tree creation.
-   * @param {string} path
-   * @param {string | Buffer} content
-   */
-  async function createBlob(path, content) {
-    console.log(`Creating blob at ${path}...`);
-    const blob = await uploadBlob(content);
-    blobs.push({
-      path,
-      mode,
-      type,
-      sha: blob.data.sha,
-    });
-    return blob;
-  }
-  /**
-   * Copy an already-created blob to a new path.
-   * @param {string} fromPath
-   * @param {string} toPath
-   */
-  async function copyBlob(fromPath, toPath) {
-    const existingBlob = blobs.find((b) => b.path === fromPath);
-    if (!existingBlob) {
-      throw new Error(`Blob not found: ${fromPath}`);
-    }
-    blobs.push({
-      path: toPath,
-      mode,
-      type,
-      sha: existingBlob.sha,
-    });
-  }
-
-  console.log("Collecting info from existing builds...");
-  const { data: baseCommit } = await github.rest.repos.getCommit({
-    ...context.repo,
-    ref: dataBranch,
-  });
-
-  const { data: buildsJson } = await github.rest.repos.getContent({
-    ...context.repo,
-    path: "builds.json",
-    ref: baseCommit.sha,
-  });
-  if (!("type" in buildsJson) || buildsJson.type !== "file")
-    throw new Error("builds.json is not a file");
-  const existingBuilds = JSON.parse(
-    Buffer.from(buildsJson.content, "base64").toString("utf8"),
-  );
+  const { baseCommit, existingBuilds } =
+    await helper.getExistingBuilds(dataBranch);
 
   const newBuilds = [];
 
@@ -266,14 +191,17 @@ export default async function run({ github, context, dryRun = false }) {
 
     const allModsJson = JSON.stringify(dataMods);
 
-    await createBlob(`${pathBase}/all.json`, allJson);
-    await createBlob(`${pathBase}/all_mods.json`, allModsJson);
+    await helper.createBlob(`${pathBase}/all.json`, allJson);
+    await helper.createBlob(`${pathBase}/all_mods.json`, allModsJson);
 
     // We upload a gzipped version of latest for boring GoogleBot reasons
     // TODO: these should go in a separate branch to reduce the total size of the main branch
     if (tag_name === latestRelease) {
-      await createBlob("data/latest.gz/all.json", zlib.gzipSync(allJson));
-      await createBlob(
+      await helper.createBlob(
+        "data/latest.gz/all.json",
+        zlib.gzipSync(allJson),
+      );
+      await helper.createBlob(
         "data/latest.gz/all_mods.json",
         zlib.gzipSync(allModsJson),
       );
@@ -287,9 +215,9 @@ export default async function run({ github, context, dryRun = false }) {
         // @ts-ignore
         const json = postprocessPoJson(po2json.parse(f.data()));
         const jsonStr = JSON.stringify(json);
-        await createBlob(`${pathBase}/lang/${lang}.json`, jsonStr);
+        await helper.createBlob(`${pathBase}/lang/${lang}.json`, jsonStr);
         if (tag_name === latestRelease)
-          await createBlob(
+          await helper.createBlob(
             `data/latest.gz/lang/${lang}.json`,
             zlib.gzipSync(jsonStr),
           );
@@ -298,9 +226,12 @@ export default async function run({ github, context, dryRun = false }) {
         if (lang.startsWith("zh_")) {
           const pinyinMap = toPinyin(data, json);
           const pinyinStr = JSON.stringify(pinyinMap);
-          await createBlob(`${pathBase}/lang/${lang}_pinyin.json`, pinyinStr);
+          await helper.createBlob(
+            `${pathBase}/lang/${lang}_pinyin.json`,
+            pinyinStr,
+          );
           if (tag_name === latestRelease)
-            await createBlob(
+            await helper.createBlob(
               `data/latest.gz/lang/${lang}_pinyin.json`,
               zlib.gzipSync(pinyinStr),
             );
@@ -331,26 +262,26 @@ export default async function run({ github, context, dryRun = false }) {
   builds.sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   console.log(`Writing ${builds.length} builds to builds.json...`);
-  await createBlob("builds.json", JSON.stringify(builds));
+  await helper.createBlob("builds.json", JSON.stringify(builds));
 
   const latestBuild = newBuilds.find((b) => b.build_number === latestRelease);
   if (latestBuild) {
     console.log(`Copying ${latestRelease} to latest...`);
-    copyBlob(
+    helper.copyBlob(
       `data/${latestBuild.build_number}/all.json`,
       "data/latest/all.json",
     );
-    copyBlob(
+    helper.copyBlob(
       `data/${latestBuild.build_number}/all_mods.json`,
       "data/latest/all_mods.json",
     );
     for (const lang of latestBuild.langs) {
-      copyBlob(
+      helper.copyBlob(
         `data/${latestBuild.build_number}/lang/${lang}.json`,
         `data/latest/lang/${lang}.json`,
       );
       if (lang.startsWith("zh_")) {
-        copyBlob(
+        helper.copyBlob(
           `data/${latestBuild.build_number}/lang/${lang}_pinyin.json`,
           `data/latest/lang/${lang}_pinyin.json`,
         );
@@ -375,7 +306,7 @@ export default async function run({ github, context, dryRun = false }) {
 
   const { data: tree } = await github.rest.git.createTree({
     ...context.repo,
-    tree: blobs,
+    tree: helper.blobs,
     base_tree: baseTree.sha,
   });
 
@@ -397,17 +328,4 @@ export default async function run({ github, context, dryRun = false }) {
     sha: commit.sha,
     force: true,
   });
-}
-
-async function retry(fn, retries = 10) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (e) {
-      console.error("Error", e.message, "- retrying...");
-      // Wait an increasing amount of time between retries
-      await new Promise((r) => setTimeout(r, 1000 * i));
-    }
-  }
-  throw new Error("Max retries reached");
 }

@@ -1,30 +1,15 @@
-// @ts-check
+import { GitHubHelper } from "./lib.mjs";
 
 /** @param {import('github-script').AsyncFunctionArguments & {dryRun?: boolean}} AsyncFunctionArguments */
 export default async function run({ github, context, dryRun = false }) {
+  const helper = new GitHubHelper({ github, context, dryRun });
   if (dryRun) {
     console.log("(DRY RUN) No changes will be made to the repository.");
   }
   const dataBranch = "main";
 
-  console.log("Collecting info from existing builds...");
-  const { data: baseCommit } = await github.rest.repos.getCommit({
-    ...context.repo,
-    ref: dataBranch,
-  });
-
-  const { data: buildsJson } = await github.rest.repos.getContent({
-    ...context.repo,
-    path: "builds.json",
-    ref: baseCommit.sha,
-  });
-
-  if (!("type" in buildsJson) || buildsJson.type !== "file")
-    throw new Error("builds.json is not a file");
-
-  const existingBuilds = JSON.parse(
-    Buffer.from(buildsJson.content, "base64").toString("utf8"),
-  );
+  const { baseCommit, existingBuilds } =
+    await helper.getExistingBuilds(dataBranch);
 
   // Apply retention policy
   const { kept: keptBuilds, removed: removedBuilds } = applyRetentionPolicy(
@@ -40,52 +25,6 @@ export default async function run({ github, context, dryRun = false }) {
   console.log(
     `Retention policy: keeping ${keptBuilds.length} builds, removing ${removedBuilds.length} builds.`,
   );
-
-  /** @type {{ path: string; mode: "100644" | "100755" | "040000" | "160000" | "120000"; type: "blob" | "commit" | "tree"; sha: string | null }[]} */
-  const blobs = [];
-  /** @type {'100644'} */
-  const mode = "100644";
-  /** @type {'blob'} */
-  const type = "blob";
-
-  /**
-   * @param {string | Buffer} content
-   */
-  async function uploadBlob(content) {
-    if (dryRun) return { data: { sha: "dry-run-sha" } };
-    return typeof content === "string"
-      ? await retry(() =>
-          github.rest.git.createBlob({
-            ...context.repo,
-            content,
-            encoding: "utf-8",
-          }),
-        )
-      : await retry(() =>
-          github.rest.git.createBlob({
-            ...context.repo,
-            content: content.toString("base64"),
-            encoding: "base64",
-          }),
-        );
-  }
-
-  /**
-   * Upload a blob to GitHub and save it in our blob list for later tree creation.
-   * @param {string} path
-   * @param {string | Buffer} content
-   */
-  async function createBlob(path, content) {
-    console.log(`Creating blob at ${path}...`);
-    const blob = await uploadBlob(content);
-    blobs.push({
-      path,
-      mode,
-      type,
-      sha: blob.data.sha,
-    });
-    return blob;
-  }
 
   const pathsToDelete = new Set();
   for (const build of removedBuilds) {
@@ -107,7 +46,7 @@ export default async function run({ github, context, dryRun = false }) {
   }
 
   console.log(`Writing ${keptBuilds.length} builds to builds.json...`);
-  const buildsBlob = await createBlob(
+  const buildsBlob = await helper.createBlob(
     "builds.json",
     JSON.stringify(keptBuilds),
   );
@@ -298,22 +237,4 @@ function applyRetentionPolicy(builds, now) {
   }
 
   return { kept, removed };
-}
-
-/**
- * @param {() => Promise<any>} fn
- * @param {number} retries
- */
-async function retry(fn, retries = 10) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.error("Error", msg, "- retrying...");
-      // Wait an increasing amount of time between retries
-      await new Promise((r) => setTimeout(r, 1000 * i));
-    }
-  }
-  throw new Error("Max retries reached");
 }
