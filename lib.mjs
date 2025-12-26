@@ -101,7 +101,7 @@ export class GitHubHelper {
    * @param {string} fromPath
    * @param {string} toPath
    */
-  async copyBlob(fromPath, toPath) {
+  copyBlob(fromPath, toPath) {
     const existingBlob = this.blobs.find((b) => b.path === fromPath);
     if (!existingBlob) {
       throw new Error(`Blob not found: ${fromPath}`);
