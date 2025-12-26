@@ -1,0 +1,25 @@
+name: Prune Old Data
+
+on:
+  schedule:
+    - cron: '30 2 * * *' # Run daily at 02:30 UTC
+  workflow_dispatch: {}
+
+jobs:
+  prune-data:
+    name: Prune Old Data
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '24.x'
+      - run: yarn
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const { default: run } = await import('${{ github.workspace }}/prune-data.mjs')
+
+            await run({ github, context })
