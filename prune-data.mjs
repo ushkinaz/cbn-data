@@ -26,25 +26,6 @@ export default async function run({ github, context, dryRun = false }) {
     `Retention policy: keeping ${keptBuilds.length} builds, removing ${removedBuilds.length} builds.`,
   );
 
-  const pathsToDelete = new Set();
-  for (const build of removedBuilds) {
-    console.log(
-      `Marking artifacts for deletion for build ${build.build_number}...`,
-    );
-    pathsToDelete.add(`data/${build.build_number}/all.json`);
-    pathsToDelete.add(`data/${build.build_number}/all_mods.json`);
-    if (build.langs) {
-      for (const lang of build.langs) {
-        pathsToDelete.add(`data/${build.build_number}/lang/${lang}.json`);
-        if (lang.startsWith("zh_")) {
-          pathsToDelete.add(
-            `data/${build.build_number}/lang/${lang}_pinyin.json`,
-          );
-        }
-      }
-    }
-  }
-
   console.log(`Writing ${keptBuilds.length} builds to builds.json...`);
   const buildsBlob = await helper.createBlob(
     "builds.json",
@@ -140,6 +121,42 @@ export default async function run({ github, context, dryRun = false }) {
 }
 
 /**
+ * @param {any} build
+ * @returns {Date | null}
+ */
+function getBuildDate(build) {
+  if (build?.created_at) {
+    const createdAt = new Date(build.created_at);
+    if (!Number.isNaN(createdAt.getTime())) {
+      return createdAt;
+    }
+  }
+
+  if (typeof build?.build_number === "string") {
+    const match = build.build_number.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) {
+      const fallback = new Date(`${match[1]}T00:00:00Z`);
+      if (!Number.isNaN(fallback.getTime())) {
+        return fallback;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * @param {Date} date
+ * @param {number} dayMs
+ */
+function toDayKey(date, dayMs) {
+  return Math.floor(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) /
+      dayMs,
+  );
+}
+
+/**
  * @param {any[]} builds
  * @param {Date} now
  */
@@ -147,9 +164,11 @@ function applyRetentionPolicy(builds, now) {
   const ONE_DAY = 1000 * 60 * 60 * 24;
   const kept = [];
   const removed = [];
+  const buildsWithoutDate = [];
 
-  // Group builds by day-age (0-indexed days ago from 'now')
+  // Group builds by build day (UTC) while tracking age from 'now'
   const buildsByDay = new Map();
+  const nowDayKey = toDayKey(now, ONE_DAY);
 
   for (const b of builds) {
     // 1. Keep all stable releases.
@@ -158,35 +177,52 @@ function applyRetentionPolicy(builds, now) {
       continue;
     }
 
-    const ageMs = now.getTime() - new Date(b.created_at).getTime();
-    const ageDays = Math.floor(ageMs / ONE_DAY);
+    const buildDate = getBuildDate(b);
+    if (!buildDate) {
+      kept.push(b);
+      buildsWithoutDate.push(b);
+      continue;
+    }
+
+    const buildDayKey = toDayKey(buildDate, ONE_DAY);
+    const ageDays = Math.max(0, nowDayKey - buildDayKey);
 
     // We only care about positive age, though future builds (clock skew?) treated as day 0
     const day = Math.max(0, ageDays);
 
-    if (!buildsByDay.has(day)) {
-      buildsByDay.set(day, []);
+    if (!buildsByDay.has(buildDayKey)) {
+      buildsByDay.set(buildDayKey, { day, builds: [] });
     }
-    buildsByDay.get(day).push(b);
+    buildsByDay.get(buildDayKey).builds.push({
+      build: b,
+      timestamp: buildDate.getTime(),
+    });
   }
 
   // Iterate over groups and apply rules
   // Sort keys just for deterministic processing order, though not strictly needed
   const days = [...buildsByDay.keys()].sort((a, b) => a - b);
 
-  for (const day of days) {
-    const dailyBuilds = buildsByDay.get(day);
-    // Sort descending by created_at (latest first) to pick "last build of the day"
-    dailyBuilds.sort((/** @type {any} */ a, /** @type {any} */ b) =>
-      b.created_at.localeCompare(a.created_at),
+  if (buildsWithoutDate.length > 0) {
+    console.log(
+      `Retention policy: keep ${buildsWithoutDate.length} builds without valid date`,
+    );
+  }
+
+  for (const dayKey of days) {
+    const { day, builds: dailyBuilds } = buildsByDay.get(dayKey);
+    // Sort descending by timestamp (latest first) to pick "last build of the day"
+    dailyBuilds.sort(
+      (/** @type {{ timestamp: number }} */ a, /** @type {{ timestamp: number }} */ b) =>
+        b.timestamp - a.timestamp,
     );
 
-    const latestInDay = dailyBuilds[0];
-    const rest = dailyBuilds.slice(1);
+    const latestInDay = dailyBuilds[0].build;
+    const rest = dailyBuilds.slice(1).map((entry) => entry.build);
 
     // Rule 2: In the last 30 days (0 <= day < 30), keep all builds.
     if (day < 30) {
-      kept.push(...dailyBuilds);
+      kept.push(...dailyBuilds.map((entry) => entry.build));
       continue;
     }
 
@@ -200,7 +236,8 @@ function applyRetentionPolicy(builds, now) {
 
     // Rule 3: 30 <= day < 90. Keep if day % 2 === 0.
     if (day >= 30 && day < 90) {
-      if (day % 2 === 0) {
+      // Use build day parity so retention stays stable across runs.
+      if (dayKey % 2 === 0) {
         kept.push(latestInDay);
       } else {
         removed.push(latestInDay);
@@ -210,7 +247,7 @@ function applyRetentionPolicy(builds, now) {
 
     // Rule 4: 90 <= day < 210. Keep if day % 4 === 0.
     if (day >= 90 && day < 210) {
-      if (day % 4 === 0) {
+      if (dayKey % 4 === 0) {
         kept.push(latestInDay);
       } else {
         removed.push(latestInDay);
@@ -220,7 +257,7 @@ function applyRetentionPolicy(builds, now) {
 
     // Rule 5: 210 <= day < 450. Keep if day % 8 === 0.
     if (day >= 210 && day < 450) {
-      if (day % 8 === 0) {
+      if (dayKey % 8 === 0) {
         kept.push(latestInDay);
       } else {
         removed.push(latestInDay);
@@ -238,3 +275,5 @@ function applyRetentionPolicy(builds, now) {
 
   return { kept, removed };
 }
+
+export { applyRetentionPolicy };
