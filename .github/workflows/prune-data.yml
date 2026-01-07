@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '24.x'
-      - run: yarn
+      - run: yarn --ignore-engines --frozen-lockfile
       - uses: actions/github-script@v8
         with:
           script: |
