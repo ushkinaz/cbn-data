@@ -50,6 +50,10 @@ https://cbn-data.pages.dev/data/latest/lang/zh_CN_pinyin.json
 
 This file has the same format as the translation file, except the values are the pinyin for the strings. This can be helpful when implementing search functionality for Chinese translations.
 
+### Tileset gfx
+
+Tileset assets are mirrored under `data/[version]/gfx/` with the same folder layout as the upstream `gfx` directory. The pull-data workflow adds `.webp` copies of PNG tiles via `calibreapp/image-actions`, while keeping the original PNGs untouched.
+
 ## Contributing
 
 To clone the repo without also downloading every historical version of the game, use the `--single-branch` option:
@@ -64,3 +68,5 @@ To run the update script locally, you'll need to have Node.js installed. Then yo
 yarn
 node pull-data-launcher.js
 ```
+
+Local runs only pull the raw gfx assets; the PNG-to-WebP conversion happens in the GitHub Actions workflow.

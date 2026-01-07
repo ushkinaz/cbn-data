@@ -85,11 +85,19 @@ function glob(zip) {
         yield {
           name: f.entryName.replaceAll("\\", "/").split("/").slice(1).join("/"),
           data: () => f.getData().toString("utf8"),
+          raw: () => f.getData(),
         };
       }
     }
   }
   return glob;
+}
+
+/**
+ * @param {string} filePath
+ */
+function stripGfxPrefix(filePath) {
+  return filePath.startsWith("gfx/") ? filePath.slice(4) : filePath;
 }
 
 /** @param {import('github-script').AsyncFunctionArguments & {dryRun?: boolean}} AsyncFunctionArguments */
@@ -117,6 +125,7 @@ export default async function run({ github, context, dryRun = false }) {
     await helper.getExistingBuilds(dataBranch);
 
   const newBuilds = [];
+  const gfxFilesByBuild = new Map();
 
   for (const release of releases.filter(
     (r) => !existingBuilds.some((b) => b.build_number === r.tag_name),
@@ -243,6 +252,24 @@ export default async function run({ github, context, dryRun = false }) {
 
     console.groupEnd();
 
+    console.group("Processing gfx...");
+    const gfxEntries = [...globFn("*/gfx/**/*")];
+    const gfxFiles = [];
+    if (gfxEntries.length === 0) {
+      console.log("No gfx assets found.");
+    } else {
+      for (const entry of gfxEntries) {
+        const relPath = stripGfxPrefix(entry.name);
+        const gfxPath = `${pathBase}/gfx/${relPath}`;
+        await helper.createBlob(gfxPath, entry.raw());
+        gfxFiles.push(relPath);
+      }
+
+      console.log(`Found ${gfxFiles.length} gfx assets.`);
+    }
+    gfxFilesByBuild.set(tag_name, gfxFiles);
+    console.groupEnd();
+
     newBuilds.push({
       build_number: tag_name,
       prerelease: release.prerelease,
@@ -286,6 +313,13 @@ export default async function run({ github, context, dryRun = false }) {
           `data/latest/lang/${lang}_pinyin.json`,
         );
       }
+    }
+    const latestGfxFiles = gfxFilesByBuild.get(latestBuild.build_number) || [];
+    for (const gfxFile of latestGfxFiles) {
+      helper.copyBlob(
+        `data/${latestBuild.build_number}/gfx/${gfxFile}`,
+        `data/latest/gfx/${gfxFile}`,
+      );
     }
   } else {
     console.log(
