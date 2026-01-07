@@ -4,15 +4,15 @@
     "test": "node tests/test-retention.mjs"
   },
   "dependencies": {
-    "gettext.js": "^1.2.0",
+    "gettext.js": "^2.0.3",
     "minimatch": "^5.0.0",
-    "pinyin": "^3.0.0-alpha.5",
+    "pinyin": "^4.0.0",
     "po2json": "^0.4.5"
   },
   "devDependencies": {
     "@types/github-script": "github:actions/github-script#v8.0.0",
     "adm-zip": "^0.5.12",
-    "octokit": "^4.0.2"
+    "octokit": "^5.0.5"
   },
   "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
 }
