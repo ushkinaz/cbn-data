@@ -1,15 +1,36 @@
-import { GitHubHelper } from "./lib.mjs";
+// @ts-check
+import { readFileSync, writeFileSync, rmSync } from "fs";
+import { join } from "path";
 
-/** @param {import('github-script').AsyncFunctionArguments & {dryRun?: boolean}} AsyncFunctionArguments */
-export default async function run({ github, context, dryRun = false }) {
-  const helper = new GitHubHelper({ github, context, dryRun });
+/**
+ * @typedef {Object} RunOptions
+ * @property {boolean} [dryRun]
+ */
+
+/** @param {RunOptions} options */
+export default async function run({ dryRun = false } = {}) {
   if (dryRun) {
     console.log("(DRY RUN) No changes will be made to the repository.");
   }
-  const dataBranch = "main";
 
-  const { baseCommit, existingBuilds } =
-    await helper.getExistingBuilds(dataBranch);
+  // Get configuration from environment
+  const workspaceDir = process.env.WORKSPACE_DIR || "data_workspace";
+  const dataBranch = process.env.DATA_BRANCH || "main";
+
+  console.log(`Working directory: ${workspaceDir}`);
+  console.log(`Data branch: ${dataBranch}`);
+
+  // Read builds.json from workspace
+  const buildsJsonPath = join(workspaceDir, "builds.json");
+  let existingBuilds = [];
+
+  try {
+    const buildsContent = readFileSync(buildsJsonPath, "utf-8");
+    existingBuilds = JSON.parse(buildsContent);
+    console.log(`Read ${existingBuilds.length} builds from builds.json`);
+  } catch (err) {
+    console.log("Could not read builds.json, assuming empty");
+  }
 
   // Apply retention policy
   const { kept: keptBuilds, removed: removedBuilds } = applyRetentionPolicy(
@@ -18,106 +39,46 @@ export default async function run({ github, context, dryRun = false }) {
   );
 
   if (removedBuilds.length === 0) {
-    console.log("Retention policy: no builds to remove.");
+    console.log("Retention policy: no builds to remove");
     return;
   }
 
   console.log(
-    `Retention policy: keeping ${keptBuilds.length} builds, removing ${removedBuilds.length} builds.`,
-  );
-
-  console.log(`Writing ${keptBuilds.length} builds to builds.json...`);
-  const buildsBlob = await helper.createBlob(
-    "builds.json",
-    JSON.stringify(keptBuilds),
+    `Retention policy: keeping ${keptBuilds.length} builds, removing ${removedBuilds.length} builds`,
   );
 
   if (dryRun) {
-    console.log("(DRY RUN) skipping commit and push.");
+    console.log("(DRY RUN) Would remove the following builds:");
+    for (const build of removedBuilds) {
+      console.log(`  - ${build.build_number}`);
+    }
+    console.log("(DRY RUN) skipping filesystem changes");
     return;
   }
 
-  console.log("Fetching root tree...");
-  const { data: baseTree } = await github.rest.git.getTree({
-    ...context.repo,
-    tree_sha: baseCommit.commit.tree.sha,
-  });
-
-  const dataEntry = baseTree.tree.find((item) => item.path === "data");
-  if (!dataEntry) {
-    throw new Error("Could not find 'data' directory in root tree");
-  }
-
-  console.log("Fetching 'data' tree...");
-  const { data: dataTree } = await github.rest.git.getTree({
-    ...context.repo,
-    tree_sha: dataEntry.sha,
-  });
-
+  // Remove build directories from data/
+  const dataDir = join(workspaceDir, "data");
   const removedBuildNumbers = new Set(
     removedBuilds.map((b) => String(b.build_number)),
   );
 
-  console.log("Filtering 'data' tree...");
-  const keptDataItems = dataTree.tree
-    .filter((item) => {
-      // item.path is the filename/dirname within 'data/'
-      return item.path && !removedBuildNumbers.has(item.path);
-    })
-    .map((item) => ({
-      path: /** @type {string} */ (item.path),
-      mode: /** @type {"100644" | "100755" | "040000" | "160000" | "120000"} */ (
-        item.mode
-      ),
-      type: /** @type {"blob" | "commit" | "tree"} */ (item.type),
-      sha: item.sha,
-    }));
+  console.log("Removing old build directories...");
+  for (const buildNumber of removedBuildNumbers) {
+    const buildDir = join(dataDir, buildNumber);
+    try {
+      rmSync(buildDir, { recursive: true, force: true });
+      console.log(`  Removed: data/${buildNumber}`);
+    } catch (err) {
+      const error = /** @type {Error} */ (err);
+      console.log(`  Warning: could not remove data/${buildNumber}: ${error.message}`);
+    }
+  }
 
-  console.log("Creating new 'data' tree...");
-  const { data: newDataTree } = await github.rest.git.createTree({
-    ...context.repo,
-    tree: keptDataItems,
-  });
+  // Write updated builds.json
+  console.log(`Writing ${keptBuilds.length} builds to builds.json...`);
+  writeFileSync(buildsJsonPath, JSON.stringify(keptBuilds, null, 2));
 
-  console.log("Creating new root tree...");
-  const { data: tree } = await github.rest.git.createTree({
-    ...context.repo,
-    base_tree: baseTree.sha,
-    tree: [
-      {
-        path: "data",
-        mode: "040000",
-        type: "tree",
-        sha: newDataTree.sha,
-      },
-      {
-        path: "builds.json",
-        mode: "100644",
-        type: "blob",
-        sha: buildsBlob.data.sha,
-      },
-    ],
-  });
-
-  console.log("Creating commit...");
-  const { data: commit } = await github.rest.git.createCommit({
-    ...context.repo,
-    message: `Prune data, keeping ${keptBuilds.length} builds`,
-    tree: tree.sha,
-    author: {
-      name: "HHG2CBN Update Bot",
-      email: "hhg2cbn@users.nooreply.github.com",
-    },
-    parents: [baseCommit.sha],
-  });
-
-  console.log(`Updating ref ${dataBranch}...`);
-  await github.rest.git.updateRef({
-    ...context.repo,
-    ref: `heads/${dataBranch}`,
-    sha: commit.sha,
-    force: true,
-  });
+  console.log("✅ Pruning complete");
 }
 
 /**
@@ -218,11 +179,11 @@ function applyRetentionPolicy(builds, now) {
     );
 
     const latestInDay = dailyBuilds[0].build;
-    const rest = dailyBuilds.slice(1).map((entry) => entry.build);
+    const rest = dailyBuilds.slice(1).map((/** @type {{ build: any }} */ entry) => entry.build);
 
     // Rule 2: In the last 30 days (0 <= day < 30), keep all builds.
     if (day < 30) {
-      kept.push(...dailyBuilds.map((entry) => entry.build));
+      kept.push(...dailyBuilds.map((/** @type {{ build: any }} */ entry) => entry.build));
       continue;
     }
 

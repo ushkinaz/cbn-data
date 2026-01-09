@@ -2,8 +2,22 @@ name: Prune Old Data
 
 on:
   schedule:
-    - cron: '30 2 * * *' # Run daily at 02:30 UTC
-  workflow_dispatch: {}
+    - cron: '0 2 12 * *' # Run monthly on 12th at 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to prune and squash'
+        required: false
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - dev
+      backup_branch:
+        description: 'Branch name for backup before squashing'
+        required: false
+        default: 'backup'
+        type: string
 
 jobs:
   prune-data:
@@ -12,14 +26,71 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout action branch
+        uses: actions/checkout@v4
+        with:
+          ref: action
+          fetch-depth: 1
+      
+      - name: Checkout data branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch || 'main' }}
+          fetch-depth: 0  # Full history needed for squashing
+          path: data_workspace
+
       - uses: actions/setup-node@v3
         with:
           node-version: '24.x'
-      - run: yarn --ignore-engines --frozen-lockfile
-      - uses: actions/github-script@v8
+          cache: 'yarn'
+
+      - run: yarn install --frozen-lockfile --ignore-engines
+
+      - name: Apply retention policy
+        uses: actions/github-script@v8
+        env:
+          DATA_BRANCH: ${{ inputs.target_branch || 'main' }}
+          WORKSPACE_DIR: data_workspace
         with:
           script: |
             const { default: run } = await import('${{ github.workspace }}/prune-data.mjs')
+            await run()
 
-            await run({ github, context })
+      - name: Commit pruned data
+        working-directory: data_workspace
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "💾 Committing pruned data..."
+            git config user.name "HHG2CBN Update Bot"
+            git config user.email "hhg2cbn@users.noreply.github.com"
+            git add -A
+            git commit -m "Prune data, keeping $(jq 'length' builds.json) builds"
+            echo "✅ Pruned data committed"
+          else
+            echo "ℹ️  No builds to prune"
+          fi
+
+      - name: Create/update backup branch
+        working-directory: data_workspace
+        run: |
+          echo "📦 Creating backup branch: ${{ inputs.backup_branch || 'backup' }}"
+          git push origin HEAD:refs/heads/${{ inputs.backup_branch || 'backup' }} --force
+          echo "✅ Backup branch updated"
+
+      - name: Squash all commits
+        working-directory: data_workspace
+        run: |
+          echo "🔄 Squashing all commits into one..."
+          TREE_SHA=$(git rev-parse HEAD^{tree})
+          COMMIT_SHA=$(git commit-tree $TREE_SHA -m "Squashed history - data as of $(date -u +%Y-%m-%d)")
+          git reset --hard $COMMIT_SHA
+          echo "✅ Created squashed commit: $COMMIT_SHA"
+          echo "📊 Repository now has 1 commit"
+
+      - name: Push squashed branch
+        working-directory: data_workspace
+        run: |
+          echo "🚀 Force pushing squashed branch to ${{ inputs.target_branch || 'main' }}..."
+          git push origin HEAD:refs/heads/${{ inputs.target_branch || 'main' }} --force
+          echo "✅ Successfully pushed squashed branch"
+

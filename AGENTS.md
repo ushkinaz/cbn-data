@@ -84,18 +84,17 @@ Key responsibilities:
 - Does NOT commit - the workflow handles git operations after this script completes
 
 #### `prune-data.mjs`
-Implements and applies the retention policy for historical builds.
+Implements and applies the retention policy for historical builds. Runs monthly via `prune-data.yml` workflow.
 
 Structure:
 - `run({ github, context, dryRun })`:
-  - Uses `GitHubHelper.getExistingBuilds("main")` to fetch `builds.json` and base commit from the `main` data branch
+  - Reads configuration from environment: `WORKSPACE_DIR` (default `data_workspace`) and `DATA_BRANCH` (default `main`)
+  - Reads `builds.json` from the workspace directory
   - Calls `applyRetentionPolicy(existingBuilds, new Date())` to partition builds into `kept` and `removed`
-  - Writes a new `builds.json` blob with `kept` builds
   - In non–dry run:
-    - Fetches the root tree and the `data` tree for `main`
-    - Filters `data/*` directories whose names match removed `build_number`s
-    - Builds a new `data` tree (only kept build directories) and a new root tree that references it plus the new `builds.json` blob
-    - Commits and updates `refs/heads/main` with a message like `Prune data, keeping <N> builds`
+    - Deletes removed build directories from `data/` on filesystem
+    - Writes updated `builds.json` with only kept builds
+  - No git operations - workflow handles commits
 
 - `applyRetentionPolicy(builds, now)` (also exported and covered by tests):
   - Computes build dates via `getBuildDate` using `created_at` or a `YYYY-MM-DD` prefix of `build_number`
@@ -107,8 +106,21 @@ Structure:
     - Drop all builds older than 450 days
   - Returns `{ kept, removed }` and logs how many builds lack valid dates
 
+#### `.github/workflows/prune-data.yml`
+Monthly workflow (12th of month at 02:00 UTC) that:
+1. Checks out the action branch and target data branch (with full history)
+2. Applies retention policy via `prune-data.mjs` to prune old builds
+3. Commits pruned data
+4. Creates/updates backup branch with pre-squash state
+5. Squashes all commits in the data branch into a single commit
+6. Force-pushes the squashed branch
+
+Inputs for manual runs:
+- `target_branch`: Choice of `main` or `dev` (default: `main`)
+- `backup_branch`: Free-form text for backup branch name (default: `backup`)
+
 #### `lib.mjs` (`GitHubHelper`)
-Shared helper used by `prune-data.mjs` to interact with the Git data model via GitHub API.
+Shared helper previously used for Git tree manipulation via GitHub API.
 
 Capabilities:
 - `getExistingBuilds(dataBranch)` reads the tip commit for `dataBranch`, fetches `builds.json` at that commit, decodes it, and returns `{ baseCommit, existingBuilds }`
@@ -116,7 +128,7 @@ Capabilities:
 - `createBlob(path, content)` uploads content and records a blob entry (path/mode/sha) onto an internal `blobs` array for later tree construction
 - `copyBlob(fromPath, toPath)` reuses an earlier blob sha in `blobs` to mirror content between paths (e.g. copying from `data/<build>/...` to `data/latest/...`)
 
-Note: `pull-data.mjs` no longer uses `GitHubHelper` - it writes directly to the filesystem. Only `prune-data.mjs` still uses it for tree manipulation.
+Note: No longer used by `pull-data.mjs` or `prune-data.mjs` - both now use direct filesystem operations. Retained for potential future use.
 
 #### `pinyin.mjs`
 - Given parsed game data and a translation JSON object, builds a parallel JSON mapping names to pinyin representations using the `pinyin` package
