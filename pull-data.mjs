@@ -291,7 +291,14 @@ export default async function run({ github, context, dryRun = false }) {
                 const relPath = stripGfxPrefix(entry.name);
                 const gfxPath = `${pathBase}/gfx/${relPath}`;
                 if (!dryRun) {
-                    writeFile(workspaceDir, gfxPath, entry.raw());
+                    // Minify JSON files (like tile_config.json) to reduce size
+                    const isJson = relPath.toLowerCase().endsWith(".json");
+                    if (isJson) {
+                        const jsonContent = JSON.stringify(JSON.parse(entry.raw().toString("utf8")));
+                        writeFile(workspaceDir, gfxPath, jsonContent);
+                    } else {
+                        writeFile(workspaceDir, gfxPath, entry.raw());
+                    }
                 }
                 gfxFiles.push(relPath);
             }

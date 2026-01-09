@@ -206,8 +206,14 @@ async function downloadAndExtractGfx(github, buildTag, targetDir, dryRun) {
                     failed++;
                 }
             } else {
-                // Non-PNG files (like JSON tileset configs) - write as-is
-                writeFile(targetDir, `gfx/${relPath}`, entry.raw());
+                // Non-PNG files (like JSON tileset configs) - minify JSON files to reduce size
+                const isJson = relPath.toLowerCase().endsWith(".json");
+                if (isJson) {
+                    const jsonContent = JSON.stringify(JSON.parse(entry.raw().toString("utf8")));
+                    writeFile(targetDir, `gfx/${relPath}`, Buffer.from(jsonContent, "utf8"));
+                } else {
+                    writeFile(targetDir, `gfx/${relPath}`, entry.raw());
+                }
                 extracted++;
             }
         }
