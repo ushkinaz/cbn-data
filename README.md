@@ -13,7 +13,7 @@ The data is committed to this repository in the `main` branch, while the code fo
 The data is available through `cbn-data.pages.dev` URLs, and you can use it directly in your projects. For example, to get the JSON data for the latest experimental version of the game, you can use the following URL:
 
 ```
-https://cbn-data.pages.d`ev/data/latest/all.json
+https://cbn-data.pages.dev/data/latest/all.json
 ```
 
 The structure of the `all.json` file is:
@@ -69,4 +69,4 @@ yarn
 node pull-data-launcher.js
 ```
 
-Local runs only pull the raw gfx assets; the PNG-to-WebP conversion happens in the GitHub Actions workflow.
+Local runs write data to a `workspace/` directory in dry-run mode. The PNG-to-WebP conversion happens in the GitHub Actions workflow. To do a real run with commits, set `GITHUB_TOKEN` environment variable.

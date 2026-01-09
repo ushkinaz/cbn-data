@@ -1,140 +1,159 @@
-name: Pull Cataclysm-BN data
+name: Pull and Process Cataclysm-BN Data
 
 on:
   schedule:
     - cron: '40 */12 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to push data to'
+        required: false
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - dev
 
 jobs:
-  pull-data:
-    name: Pull Cataclysm-BN data
+  pull-and-process:
+    name: Pull Data & Convert GFX
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout action branch
+        uses: actions/checkout@v4
+        with:
+          ref: action
+          fetch-depth: 1
+      
+      - name: Checkout data branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch || 'main' }}
+          fetch-depth: 1
+          path: data_workspace
+
       - uses: actions/setup-node@v3
         with:
           node-version: '24.x'
-      - run: yarn --ignore-engines --frozen-lockfile
-      - uses: actions/github-script@v8
+          cache: 'yarn'
+
+      - run: yarn install --frozen-lockfile --ignore-engines
+
+      - name: Pull game data
+        uses: actions/github-script@v8
+        env:
+          DATA_BRANCH: ${{ inputs.target_branch || 'main' }}
+          WORKSPACE_DIR: data_workspace
         with:
           script: |
             const { default: run } = await import('${{ github.workspace }}/pull-data.mjs')
-
             await run({ github, context })
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-      - name: Gather updated gfx targets
-        id: gfx_targets
+
+      - name: Install WebP tools
+        run: sudo apt-get update && sudo apt-get install -y webp
+
+      - name: Convert PNGs to WebP
+        working-directory: data_workspace
         run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import subprocess
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔄 Starting GFX PNG to WebP conversion"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          total_converted=0
+          total_failed=0
+          
+          # Iterate over data/DATE directories
+          for build_dir in data/*/; do
+            if [ ! -d "$build_dir" ]; then continue; fi
+            build_name=$(basename "$build_dir")
+            
+            # Skip special directories
+            if [[ "$build_name" == "latest"* ]]; then continue; fi
+            
+            # Check if gfx directory exists
+            if [ ! -d "${build_dir}gfx" ]; then continue; fi
+            
+            echo "📦 Processing $build_name build"
+            build_converted=0
+            build_failed=0
+            
+            # Iterate over data/DATE/gfx/TILESET directories
+            for tileset_dir in "${build_dir}gfx"/*/; do
+              if [ ! -d "$tileset_dir" ]; then continue; fi
+              tileset_name=$(basename "$tileset_dir")
+              
+              # Find all PNG files in this tileset
+              png_files=$(find "$tileset_dir" -type f -name "*.png" 2>/dev/null)
+              png_count=$(echo "$png_files" | grep -c "\.png$" || echo "0")
+              
+              if [ "$png_count" -gt 0 ]; then
+                echo "  🎨 Processing $tileset_name ($png_count PNGs)"
+                
+                # Convert each PNG to WebP
+                for png_file in $png_files; do
+                  webp_file="${png_file%.png}.webp"
+                  
+                  # Convert PNG to WebP with quality 80
+                  if cwebp -q 80 "$png_file" -o "$webp_file" >/dev/null 2>&1; then
+                    # Delete the original PNG after successful conversion
+                    rm "$png_file"
+                    build_converted=$((build_converted + 1))
+                  else
+                    echo "    ⚠️  Failed to convert: $(basename "$png_file")"
+                    build_failed=$((build_failed + 1))
+                  fi
+                done
+              fi
+            done
+            
+            if [ $build_converted -gt 0 ]; then
+              echo "  ✅ Converted $build_converted files from $build_name"
+              if [ $build_failed -gt 0 ]; then
+                echo "  ⚠️  Failed: $build_failed files"
+              fi
+              total_converted=$((total_converted + build_converted))
+              total_failed=$((total_failed + build_failed))
+            else
+              echo "  ✅ No PNGs to convert in $build_name"
+            fi
+            echo ""
+          done
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 Summary: Converted $total_converted files"
+          if [ $total_failed -gt 0 ]; then
+            echo "⚠️  Failed: $total_failed files"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          msg = subprocess.check_output(
-              ["git", "log", "-1", "--pretty=%s"], text=True
-          ).strip()
-          targets = []
-          if msg.startswith("Update data for "):
-              diff = subprocess.check_output(
-                  ["git", "diff", "--name-only", "HEAD~1"], text=True
-              ).splitlines()
-              for path in diff:
-                  parts = path.split("/")
-                  if len(parts) >= 3 and parts[0] == "data" and parts[2] == "gfx":
-                      target = "/".join(parts[:3])
-                      if target not in targets:
-                          targets.append(target)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as handle:
-              handle.write(f"targets={json.dumps(targets)}\n")
-          PY
-      - name: Stage gfx WebP copies
-        id: gfx_stage
-        if: steps.gfx_targets.outputs.targets != '[]'
-        env:
-          GFX_TARGETS: ${{ steps.gfx_targets.outputs.targets }}
+      - name: Commit and push all changes
+        working-directory: data_workspace
         run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import shutil
-
-          targets = json.loads(os.environ["GFX_TARGETS"])
-          repo_root = os.getcwd()
-          stage_root = os.path.join(repo_root, ".gfx-webp-stage")
-          if os.path.exists(stage_root):
-              shutil.rmtree(stage_root)
-
-          created = 0
-          for target in targets:
-              target_path = os.path.join(repo_root, target)
-              if not os.path.isdir(target_path):
-                  continue
-              for dirpath, _, filenames in os.walk(target_path):
-                  for name in filenames:
-                      if not name.lower().endswith(".png"):
-                          continue
-                      src = os.path.join(dirpath, name)
-                      rel = os.path.relpath(src, repo_root)
-                      rel_webp = rel[:-4] + ".webp"
-                      dest_repo = os.path.join(repo_root, rel_webp)
-                      if os.path.exists(dest_repo):
-                          continue
-                      dest_stage = os.path.join(stage_root, rel_webp)
-                      os.makedirs(os.path.dirname(dest_stage), exist_ok=True)
-                      shutil.copyfile(src, dest_stage)
-                      created += 1
-
-          if created == 0 and os.path.exists(stage_root):
-              shutil.rmtree(stage_root)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as handle:
-              handle.write(f"created={created}\n")
-          PY
-      - name: Convert staged gfx to WebP
-        if: steps.gfx_stage.outputs.created != '0'
-        uses: calibreapp/image-actions@main
-        with:
-          compressOnly: true
-          ignorePaths: '**/*.png,**/*.jpg,**/*.jpeg,**/*.avif'
-          minPctChange: '-10000'
-        env:
-          GITHUB_WORKSPACE: ${{ github.workspace }}/.gfx-webp-stage
-      - name: Sync gfx WebP into repo
-        if: steps.gfx_stage.outputs.created != '0'
-        run: |
-          python3 - <<'PY'
-          import os
-          import shutil
-
-          repo_root = os.getcwd()
-          stage_root = os.path.join(repo_root, ".gfx-webp-stage")
-          for dirpath, _, filenames in os.walk(stage_root):
-              for name in filenames:
-                  if not name.lower().endswith(".webp"):
-                      continue
-                  src = os.path.join(dirpath, name)
-                  rel = os.path.relpath(src, stage_root)
-                  dest = os.path.join(repo_root, rel)
-                  os.makedirs(os.path.dirname(dest), exist_ok=True)
-                  shutil.copyfile(src, dest)
-
-          shutil.rmtree(stage_root)
-          PY
-      - name: Commit gfx WebP
-        if: steps.gfx_stage.outputs.created != '0'
-        run: |
-          if git status --porcelain | grep -q .; then
+          # Check if there are any changes
+          if [[ -n $(git status --porcelain) ]]; then
+            echo ""
+            echo "💾 Committing all changes..."
             git config user.name "HHG2CBN Update Bot"
             git config user.email "hhg2cbn@users.noreply.github.com"
-            git add -- ':(glob)data/**/gfx/**/*.webp'
-            git commit -m "Add gfx webp files"
-            git push origin HEAD:main
+            git add -A
+            
+            # Create commit message
+            COMMIT_MSG="Update data and convert GFX to WebP"
+            if [ -f builds.json ]; then
+              LATEST_BUILD=$(jq -r '.[0].build_number' builds.json)
+              if [ "$LATEST_BUILD" != "null" ]; then
+                COMMIT_MSG="Update data for $LATEST_BUILD"
+              fi
+            fi
+            
+            git commit -m "$COMMIT_MSG"
+            git push origin HEAD:${{ inputs.target_branch || 'main' }}
+            echo "✅ Successfully pushed all changes"
           else
-            echo "No gfx changes to commit."
+            echo ""
+            echo "ℹ️  No changes to commit"
           fi
+

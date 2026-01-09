@@ -5,6 +5,11 @@ const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
 });
 
+// Use 'workspace' for local testing (create it if needed)
+if (!process.env.WORKSPACE_DIR) {
+  process.env.WORKSPACE_DIR = "workspace";
+}
+
 await run({
   github: octokit,
   context: {
