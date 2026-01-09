@@ -1,6 +1,6 @@
 # Guidance for contributors
 
-This repository mirrors JSON, translation, and tileset gfx data from Cataclysm: Bright Nights and publishes it as static data snapshots (e.g. via `cbn-data.pages.dev`). Use these notes for any work under this directory.
+This repository mirrors JSON, translation, and tileset gfx data from Cataclysm: Bright Nights and deploys it at [https://cbn-data.pages.dev/](https://cbn-data.pages.dev/) as static data snapshots. Use these notes for any work under this directory.
 
 ## Repository structure
 This repository uses **orphan branches** with completely separate histories:
@@ -51,6 +51,14 @@ GITHUB_TOKEN={{GITHUB_TOKEN}} node prune-data-launcher.js
 Both launchers run in **dry-run** mode when `GITHUB_TOKEN` is not set (`dryRun: !process.env.GITHUB_TOKEN`). In dry-run mode:
 - `pull-data-launcher.js` writes to `workspace/` directory without committing
 - `prune-data-launcher.js` computes changes but doesn't update the data branch
+- `migrate-gfx.mjs` (via `MIGRATION.md` instructions) performs local GFX recovery/migration
+
+### GFX Migration
+For historical builds missing WebP assets, use the migration utility:
+```bash
+# See MIGRATION.md for details
+GITHUB_TOKEN=xxx node migrate-gfx.mjs --dry-run
+```
 
 
 ## Code architecture
@@ -81,7 +89,7 @@ Key responsibilities:
   - `data/latest/*` and `data/latest.gz/*` mirrors for the latest experimental, including gfx assets
 - Works on a checked-out data branch (via `WORKSPACE_DIR` env var, default `data_workspace`)
 - Honors `dryRun`: no files are written when enabled
-- Does NOT commit - the workflow handles git operations after this script completes
+- Does NOT commit or convert GFX - the workflow (`pull-data.yml`) handles GFX conversion to WebP and git operations after this script completes
 
 #### `prune-data.mjs`
 Implements and applies the retention policy for historical builds. Runs monthly via `prune-data.yml` workflow.
@@ -133,6 +141,11 @@ Note: No longer used by `pull-data.mjs` or `prune-data.mjs` - both now use direc
 #### `pinyin.mjs`
 - Given parsed game data and a translation JSON object, builds a parallel JSON mapping names to pinyin representations using the `pinyin` package
 - Keeps translation metadata in the `""` key, mirroring the translation file structure
+
+#### `migrate-gfx.mjs`
+Utility to backfill GFX for older builds that were archived before GFX processing was automated.
+- Downloads release zipball, extracts PNGs, converts to WebP with `cwebp -preset icon`, and deletes originals.
+- See [MIGRATION.md](file:///Users/dmitry/Workspace/C-BN/cbn-data/MIGRATION.md) for usage details.
 
 #### Launchers (`pull-data-launcher.js`, `prune-data-launcher.js`)
 Thin ESM wrappers that:

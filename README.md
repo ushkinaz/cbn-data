@@ -1,6 +1,6 @@
 # cbn-data
 
-This repo mirrors the JSON and translation data from nightly and release versions of [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Cataclysm-BN) for use in other projects, most notably the [The Hitchhiker's Guide to the Cataclysm: Bright Nights](https://cbn-guide.pages.dev/). The data is updated automatically every 12 hours.
+This repo mirrors the JSON and translation data from nightly and release versions of [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Cataclysm-BN) and deploys it at [https://cbn-data.pages.dev/](https://cbn-data.pages.dev/) for use in other projects, most notably the [The Hitchhiker's Guide to the Cataclysm: Bright Nights](https://cbn-guide.pages.dev/). The data is updated automatically every 12 hours.
 
 ## Status
 [![Pull Cataclysm-BN data](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml/badge.svg?branch=action)](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml)
@@ -52,7 +52,7 @@ This file has the same format as the translation file, except the values are the
 
 ### Tileset gfx
 
-Tileset assets are mirrored under `data/[version]/gfx/` with the same folder layout as the upstream `gfx` directory. The pull-data workflow adds `.webp` copies of PNG tiles via `calibreapp/image-actions`, while keeping the original PNGs untouched.
+Tileset assets are mirrored under `data/[version]/gfx/` with the same folder layout as the upstream `gfx` directory. The pull-data workflow converts PNG tiles to `.webp` format using `cwebp` to save space and improve loading times. Original PNGs are deleted after successful conversion.
 
 ## Contributing
 

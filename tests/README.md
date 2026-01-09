@@ -35,7 +35,7 @@ cd /path/to/other/branch
 node tests/test-retention.mjs
 ```
 
-The tests will automatically import `prune-data.mjs` from the parent directory.
+The tests will automatically import `applyRetentionPolicy` from `../prune-data.mjs`.
 
 ## Expected Results (Fixed Version)
 
