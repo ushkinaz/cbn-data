@@ -1,14 +1,15 @@
 // @ts-check
 /**
- * Migration script to fetch missing GFX files and convert to WebP
+ * Migration script to fetch missing GFX files and precompress JSON
  * 
  * This script:
  * 1. Reads builds.json to find existing builds
  * 2. Identifies builds missing GFX files
  * 3. Downloads upstream zipballs for those builds
  * 4. Extracts GFX assets and converts PNG to WebP
- * 5. Writes WebP files to build directories
- * 6. Prepares changes for commit
+ * 5. Precompresses all JSON files (creates .gz and .br variants)
+ * 6. Writes files to build directories
+ * 7. Prepares changes for commit
  * 
  * Usage:
  *   GITHUB_TOKEN=xxx node migrate-gfx.mjs [--dry-run] [--branch=main] [--build=2024-01-01]
@@ -107,6 +108,25 @@ function hasGfxFiles(workspaceDir, buildTag) {
     const files = exec(`find "${gfxDir}" -type f`, { silent: true, ignoreError: true });
     return files && files.trim().length > 0;
 }
+
+/**
+ * Check if a build has precompressed JSON files
+ * @param {string} workspaceDir
+ * @param {string} buildTag
+ */
+function hasCompressedJson(workspaceDir, buildTag) {
+    const buildDir = path.join(workspaceDir, "data", buildTag);
+    if (!fs.existsSync(buildDir)) {
+        return false;
+    }
+
+    // Check if any .gz or .br files exist
+    const gzFiles = exec(`find "${buildDir}" -type f -name "*.json.gz" | head -1`, { silent: true, ignoreError: true });
+    const brFiles = exec(`find "${buildDir}" -type f -name "*.json.br" | head -1`, { silent: true, ignoreError: true });
+
+    return (gzFiles && gzFiles.trim().length > 0) || (brFiles && brFiles.trim().length > 0);
+}
+
 
 /**
  * Create glob function for zip file
@@ -302,21 +322,21 @@ async function migrate() {
         return;
     }
 
-    // Filter builds missing GFX (unless --force is used)
+    // Filter builds missing GFX or compressed JSON (unless --force is used)
     let buildsToPprocess = builds
         .filter(b => !specificBuild || b.build_number === specificBuild)
-        .filter(b => force || !hasGfxFiles(DEFAULT_WORKSPACE, b.build_number));
+        .filter(b => force || !hasGfxFiles(DEFAULT_WORKSPACE, b.build_number) || !hasCompressedJson(DEFAULT_WORKSPACE, b.build_number));
 
     if (buildsToPprocess.length === 0) {
         if (specificBuild) {
-            console.log(`ℹ️  Build ${specificBuild} already has GFX files or doesn't exist.`);
+            console.log(`ℹ️  Build ${specificBuild} is already complete or doesn't exist.`);
         } else {
-            console.log("ℹ️  All builds already have GFX files. Nothing to do.");
+            console.log("ℹ️  All builds are already complete. Nothing to do.");
         }
         return;
     }
 
-    console.log(`🔍 Found ${buildsToPprocess.length} builds missing GFX:\n`);
+    console.log(`🔍 Found ${buildsToPprocess.length} builds needing migration:\n`);
     for (const build of buildsToPprocess) {
         console.log(`   - ${build.build_number}`);
     }
@@ -331,16 +351,23 @@ async function migrate() {
         console.log(`📦 Processing ${build.build_number}`);
         const targetDir = path.join(DEFAULT_WORKSPACE, "data", build.build_number);
 
-        const stats = await downloadAndExtractGfx(
-            github,
-            build.build_number,
-            targetDir,
-            dryRun
-        );
+        const needsGfx = force || !hasGfxFiles(DEFAULT_WORKSPACE, build.build_number);
 
-        totalExtracted += stats.extracted;
-        totalConverted += stats.converted;
-        totalFailed += stats.failed;
+        if (needsGfx) {
+            const stats = await downloadAndExtractGfx(
+                github,
+                build.build_number,
+                targetDir,
+                dryRun
+            );
+
+            totalExtracted += stats.extracted;
+            totalConverted += stats.converted;
+            totalFailed += stats.failed;
+        } else {
+            console.log(`  ✓ GFX already exists, skipping download`);
+        }
+
         console.log("");
     }
 
@@ -354,6 +381,82 @@ async function migrate() {
         console.log(`   Failed conversions: ${totalFailed}`);
     }
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    // Precompress JSON files (independent of GFX processing)
+    if (!dryRun) {
+        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.log("🗜️  Precompressing JSON files");
+        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+        let jsonCount = 0;
+        let gzipCount = 0;
+        let brotliCount = 0;
+
+        // Check if brotli is available
+        const hasBrotli = exec("which brotli", { silent: true, ignoreError: true });
+
+        for (const build of buildsToPprocess) {
+            const needsCompression = force || !hasCompressedJson(DEFAULT_WORKSPACE, build.build_number);
+
+            if (!needsCompression) {
+                continue; // Skip builds that already have compressed files
+            }
+
+            const buildDir = path.join(DEFAULT_WORKSPACE, "data", build.build_number);
+
+            // Find all JSON files in this build
+            const findResult = exec(`find "${buildDir}" -type f -name "*.json" 2>/dev/null`, {
+                silent: true,
+                ignoreError: true
+            });
+
+            if (!findResult) continue;
+
+            const jsonFiles = findResult.trim().split("\n").filter(f => f);
+
+            for (const jsonFile of jsonFiles) {
+                jsonCount++;
+
+                // Gzip compression
+                try {
+                    exec(`gzip -9 -k -f "${jsonFile}"`, { silent: true });
+                    gzipCount++;
+                } catch (e) {
+                    // Ignore errors
+                }
+
+                // Brotli compression (if available)
+                if (hasBrotli) {
+                    try {
+                        exec(`brotli -q 11 -k -f "${jsonFile}"`, { silent: true });
+                        brotliCount++;
+                    } catch (e) {
+                        // Ignore errors
+                    }
+                }
+
+                if (jsonCount % 10 === 0) {
+                    process.stdout.write(`\r  📄 Processed ${jsonCount} JSON files...`);
+                }
+            }
+        }
+
+        // Clear progress line
+        if (jsonCount > 0) {
+            process.stdout.write("\r" + " ".repeat(80) + "\r");
+        }
+
+        console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.log("📊 Compression Summary:");
+        console.log(`   JSON files: ${jsonCount}`);
+        console.log(`   Gzipped (.gz): ${gzipCount}`);
+        if (hasBrotli) {
+            console.log(`   Brotli (.br): ${brotliCount}`);
+        } else {
+            console.log(`   Brotli: skipped (not installed)`);
+        }
+        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    }
 
     if (dryRun) {
         console.log("ℹ️  This was a DRY RUN. No files were modified.");

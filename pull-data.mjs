@@ -110,19 +110,6 @@ function writeFile(baseDir, relativePath, content) {
     fs.writeFileSync(fullPath, content);
 }
 
-/**
- * Copy file within the same base directory
- * @param {string} baseDir
- * @param {string} fromPath
- * @param {string} toPath
- */
-function copyFile(baseDir, fromPath, toPath) {
-    const fullFrom = path.join(baseDir, fromPath);
-    const fullTo = path.join(baseDir, toPath);
-    const dir = path.dirname(fullTo);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.copyFileSync(fullFrom, fullTo);
-}
 
 /**
  * Get existing builds from builds.json
@@ -157,17 +144,12 @@ export default async function run({ github, context, dryRun = false }) {
         repo: "Cataclysm-BN",
     });
 
-    const latestRelease = releases.find((r) =>
-        /^\d{4}-\d{2}-\d{2}/.test(r.tag_name),
-    )?.tag_name;
-
-    console.log(`Latest experimental: ${latestRelease}`);
 
     const existingBuilds = getExistingBuilds(workspaceDir);
     console.log(`Found ${existingBuilds.length} existing builds`);
 
     const newBuilds = [];
-    const gfxFilesByBuild = new Map();
+
 
     for (const release of releases.filter(
         (r) => !existingBuilds.some((b) => b.build_number === r.tag_name),
@@ -245,11 +227,6 @@ export default async function run({ github, context, dryRun = false }) {
         if (!dryRun) {
             writeFile(workspaceDir, `${pathBase}/all.json`, allJson);
             writeFile(workspaceDir, `${pathBase}/all_mods.json`, allModsJson);
-
-            if (tag_name === latestRelease) {
-                writeFile(workspaceDir, "data/latest.gz/all.json", zlib.gzipSync(allJson));
-                writeFile(workspaceDir, "data/latest.gz/all_mods.json", zlib.gzipSync(allModsJson));
-            }
         }
 
         console.group("Processing languages...");
@@ -262,17 +239,11 @@ export default async function run({ github, context, dryRun = false }) {
 
                 if (!dryRun) {
                     writeFile(workspaceDir, `${pathBase}/lang/${lang}.json`, jsonStr);
-                    if (tag_name === latestRelease) {
-                        writeFile(workspaceDir, `data/latest.gz/lang/${lang}.json`, zlib.gzipSync(jsonStr));
-                    }
 
                     if (lang.startsWith("zh_")) {
                         const pinyinMap = toPinyin(data, json);
                         const pinyinStr = JSON.stringify(pinyinMap);
                         writeFile(workspaceDir, `${pathBase}/lang/${lang}_pinyin.json`, pinyinStr);
-                        if (tag_name === latestRelease) {
-                            writeFile(workspaceDir, `data/latest.gz/lang/${lang}_pinyin.json`, zlib.gzipSync(pinyinStr));
-                        }
                     }
                 }
                 return lang;
@@ -304,7 +275,7 @@ export default async function run({ github, context, dryRun = false }) {
             }
             console.log(`Found ${gfxFiles.length} gfx assets.`);
         }
-        gfxFilesByBuild.set(tag_name, gfxFiles);
+
         console.groupEnd();
 
         newBuilds.push({
@@ -329,28 +300,7 @@ export default async function run({ github, context, dryRun = false }) {
         writeFile(workspaceDir, "builds.json", JSON.stringify(builds));
     }
 
-    const latestBuild = newBuilds.find((b) => b.build_number === latestRelease);
-    if (latestBuild) {
-        console.log(`Copying ${latestRelease} to latest...`);
-        if (!dryRun) {
-            copyFile(workspaceDir, `data/${latestBuild.build_number}/all.json`, "data/latest/all.json");
-            copyFile(workspaceDir, `data/${latestBuild.build_number}/all_mods.json`, "data/latest/all_mods.json");
-            for (const lang of latestBuild.langs) {
-                copyFile(workspaceDir, `data/${latestBuild.build_number}/lang/${lang}.json`, `data/latest/lang/${lang}.json`);
-                if (lang.startsWith("zh_")) {
-                    copyFile(workspaceDir, `data/${latestBuild.build_number}/lang/${lang}_pinyin.json`, `data/latest/lang/${lang}_pinyin.json`);
-                }
-            }
-            const latestGfxFiles = gfxFilesByBuild.get(latestBuild.build_number) || [];
-            for (const gfxFile of latestGfxFiles) {
-                copyFile(workspaceDir, `data/${latestBuild.build_number}/gfx/${gfxFile}`, `data/latest/gfx/${gfxFile}`);
-            }
-        }
-    } else {
-        console.log(
-            `Latest release (${latestRelease}) not in updated builds, skipping copy to latest.`,
-        );
-    }
+
 
     if (dryRun) {
         console.log("(DRY RUN) Skipping git commit.");
