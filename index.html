@@ -1,946 +1,1544 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>C:BN Data Bunker - Dont Panic Edition</title>
-        <meta
-            name="description"
-            content="Cataclysm: Bright Nights data mirror with JSON, translations, GFX, and a Hitchhiker approved lack of panic."
-        />
-        <style>
-            @import url("https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&display=swap");
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>C:BN DATA VAULT // TERMINAL ACCESS</title>
+    <meta
+      name="description"
+      content="Cataclysm: Bright Nights data mirror. Terminal-grade JSON, translations, and GFX assets for wasteland survivors."
+    />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap");
 
-            :root {
-                --bg-1: #0b0f0d;
-                --bg-2: #151a16;
-                --ink: #e6f2e2;
-                --muted: #a9b9ad;
-                --acid: #a8ff3e;
-                --ember: #ff9b54;
-                --rust: #d24d1f;
-                --tape: #1f2a23;
-                --panel: #121714;
-                --sky: #6ee7ff;
-                --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-            }
+      :root {
+        --terminal-bg: #000000;
+        --terminal-green: #00ff41;
+        --terminal-green-dim: #00cc33;
+        --terminal-green-glow: rgba(0, 255, 65, 0.5);
+        --cyan: #00ffff;
+        --cyan-glow: rgba(0, 255, 255, 0.6);
+        --magenta: #ff00ff;
+        --magenta-glow: rgba(255, 0, 255, 0.6);
+        --yellow: #ffff00;
+        --red: #ff0050;
+        --red-glow: rgba(255, 0, 80, 0.6);
+        --terminal-text: #00ff41;
+        --terminal-dim: #009922;
+        --panel-bg: rgba(0, 20, 10, 0.85);
+        --border-glow: rgba(0, 255, 65, 0.3);
+        --scanline: rgba(0, 255, 65, 0.03);
+      }
 
-            * {
-                box-sizing: border-box;
-            }
+      * {
+        box-sizing: border-box;
+      }
 
-            html,
-            body {
-                height: 100%;
-            }
+      html,
+      body {
+        height: 100%;
+        overflow-x: hidden;
+      }
 
-            body {
-                margin: 0;
-                color: var(--ink);
-                background:
-                    radial-gradient(
-                        900px 420px at 20% 105%,
-                        rgba(110, 231, 255, 0.14),
-                        transparent 60%
-                    ),
-                    radial-gradient(
-                        1200px 600px at 10% -10%,
-                        rgba(168, 255, 62, 0.16),
-                        transparent 60%
-                    ),
-                    radial-gradient(
-                        900px 500px at 90% 10%,
-                        rgba(255, 155, 84, 0.16),
-                        transparent 60%
-                    ),
-                    repeating-linear-gradient(
-                        135deg,
-                        rgba(255, 255, 255, 0.03) 0 2px,
-                        transparent 2px 8px
-                    ),
-                    linear-gradient(180deg, var(--bg-1), var(--bg-2));
-                font-family: "Space Mono", monospace;
-                letter-spacing: 0.2px;
-            }
+      body {
+        margin: 0;
+        color: var(--terminal-green);
+        background: var(--terminal-bg);
+        font-family: "Share Tech Mono", monospace;
+        letter-spacing: 0.5px;
+        position: relative;
+        cursor: crosshair;
+      }
 
-            .page {
-                max-width: 1120px;
-                margin: 0 auto;
-                padding: 28px 20px 60px;
-            }
+      /* CRT SCANLINES */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: repeating-linear-gradient(
+          0deg,
+          var(--scanline) 0px,
+          transparent 1px,
+          transparent 2px,
+          var(--scanline) 3px
+        );
+        pointer-events: none;
+        z-index: 9999;
+        animation: flicker 0.15s infinite;
+      }
 
-            header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 16px;
-                padding: 8px 0 24px;
-                animation: reveal 0.9s ease forwards;
-            }
+      /* CRT SCREEN GLOW */
+      body::after {
+        content: "";
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          ellipse at center,
+          var(--terminal-green-glow) 0%,
+          transparent 50%
+        );
+        opacity: 0.15;
+        pointer-events: none;
+        z-index: 1;
+        animation: pulse-glow 4s ease-in-out infinite;
+      }
 
-            .logo {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-            }
+      @keyframes flicker {
+        0% {
+          opacity: 0.97;
+        }
 
-            .logo-badge {
-                width: 48px;
-                height: 48px;
-                border-radius: 12px;
-                background: conic-gradient(
-                    from 90deg,
-                    var(--acid),
-                    var(--ember),
-                    var(--rust),
-                    var(--acid)
-                );
-                box-shadow: var(--shadow);
-                position: relative;
-            }
+        50% {
+          opacity: 1;
+        }
 
-            .logo-badge::after {
-                content: "";
-                position: absolute;
-                inset: 8px;
-                border-radius: 8px;
-                background: var(--bg-1);
-                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-            }
+        100% {
+          opacity: 0.98;
+        }
+      }
 
-            .logo-title {
-                font-family: "Bungee", sans-serif;
-                font-size: 1.2rem;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          opacity: 0.12;
+        }
 
-            nav a {
-                color: var(--muted);
-                text-decoration: none;
-                margin-left: 16px;
-                font-size: 0.95rem;
-                border-bottom: 2px solid transparent;
-                transition:
-                    border-color 200ms ease,
-                    color 200ms ease;
-            }
+        50% {
+          opacity: 0.18;
+        }
+      }
 
-            nav a:hover,
-            nav a:focus-visible {
-                color: var(--ink);
-                border-color: var(--acid);
-            }
+      .page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        position: relative;
+        z-index: 2;
+      }
 
-            .hero {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-                gap: 28px;
-                align-items: stretch;
-            }
+      /* ASCII BORDER */
+      .ascii-border {
+        border: 2px solid var(--terminal-green);
+        padding: 2px;
+        position: relative;
+        box-shadow:
+          0 0 10px var(--border-glow),
+          inset 0 0 10px var(--border-glow);
+      }
 
-            .hero-card {
-                background: var(--panel);
-                border-radius: 18px;
-                padding: 28px;
-                box-shadow: var(--shadow);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                position: relative;
-                overflow: hidden;
-            }
+      .ascii-border::before,
+      .ascii-border::after {
+        content: "▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓";
+        position: absolute;
+        left: 0;
+        right: 0;
+        font-family: "VT323", monospace;
+        font-size: 8px;
+        line-height: 1;
+        color: var(--terminal-green);
+        text-shadow: 0 0 5px var(--terminal-green-glow);
+        overflow: hidden;
+        white-space: nowrap;
+      }
 
-            .hero-card::before {
-                content: "";
-                position: absolute;
-                inset: 0;
-                background: linear-gradient(
-                    120deg,
-                    rgba(168, 255, 62, 0.08),
-                    transparent 60%
-                );
-                opacity: 0.9;
-                pointer-events: none;
-            }
+      .ascii-border::before {
+        top: -10px;
+      }
 
-            h1 {
-                font-family: "Bungee", sans-serif;
-                font-size: clamp(2.2rem, 4vw, 3.4rem);
-                margin: 12px 0 8px;
-                text-transform: uppercase;
-            }
+      .ascii-border::after {
+        bottom: -10px;
+      }
 
-            .tagline {
-                font-size: 1.05rem;
-                color: var(--muted);
-                margin-bottom: 18px;
-            }
+      /* HEADER */
+      header {
+        background: var(--panel-bg);
+        border: 2px double var(--terminal-green);
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow:
+          0 0 20px var(--border-glow),
+          inset 0 0 20px rgba(0, 255, 65, 0.05);
+        position: relative;
+        overflow: hidden;
+      }
 
-            .dont-panic {
-                display: inline-flex;
-                align-items: center;
-                gap: 10px;
-                padding: 8px 14px;
-                border-radius: 999px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                background: rgba(110, 231, 255, 0.12);
-                text-transform: uppercase;
-                font-weight: 700;
-                font-size: 0.85rem;
-                letter-spacing: 1px;
-            }
+      header::before {
+        content: "SYSTEM ONLINE // ACCESS PENDING // UPLINK ESTABLISHED";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: var(--terminal-green);
+        color: #000;
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-shadow: none;
+      }
 
-            .quip {
-                display: inline-flex;
-                align-items: center;
-                gap: 10px;
-                background: var(--tape);
-                border-radius: 999px;
-                padding: 6px 14px;
-                font-size: 0.9rem;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-            }
+      .logo-container {
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
 
-            .actions {
-                margin-top: 20px;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 12px;
-            }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
 
-            .btn {
-                display: inline-flex;
-                align-items: center;
-                gap: 10px;
-                text-decoration: none;
-                padding: 12px 18px;
-                border-radius: 10px;
-                font-weight: 700;
-                letter-spacing: 0.4px;
-                background: var(--acid);
-                color: #0b0f0d;
-                border: 2px solid transparent;
-                transition:
-                    transform 160ms ease,
-                    box-shadow 160ms ease;
-            }
+      .logo-ascii {
+        width: 80px;
+        height: 80px;
+        filter: drop-shadow(0 0 10px var(--terminal-green-glow))
+          drop-shadow(0 0 20px var(--terminal-green-glow));
+        flex-shrink: 0;
+      }
 
-            .btn:hover,
-            .btn:focus-visible {
-                transform: translateY(-2px);
-                box-shadow: 0 12px 25px rgba(168, 255, 62, 0.35);
-            }
+      @keyframes glitch-logo {
+        0%,
+        90%,
+        100% {
+          transform: translate(0);
+        }
 
-            .btn.secondary {
-                background: transparent;
-                color: var(--ink);
-                border-color: var(--ember);
-            }
+        92% {
+          transform: translate(-2px, 2px);
+        }
 
-            .status {
-                display: grid;
-                gap: 14px;
-            }
+        94% {
+          transform: translate(2px, -2px);
+        }
 
-            .status h2 {
-                font-family: "Bungee", sans-serif;
-                margin: 0 0 10px;
-                text-transform: uppercase;
-                font-size: 1.2rem;
-            }
+        96% {
+          transform: translate(-2px, -2px);
+        }
+      }
 
-            .status-card {
-                background: rgba(12, 15, 13, 0.85);
-                border-radius: 16px;
-                padding: 18px;
-                border: 1px dashed rgba(255, 255, 255, 0.12);
-            }
+      .logo-title {
+        font-family: "Rajdhani", sans-serif;
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        color: var(--terminal-green);
+        text-shadow:
+          0 0 10px var(--terminal-green-glow),
+          0 0 20px var(--terminal-green-glow),
+          0 0 30px var(--terminal-green-glow);
+        animation: text-flicker 3s infinite;
+      }
 
-            .status-row {
-                display: grid;
-                grid-template-columns: 150px 1fr;
-                align-items: baseline;
-                margin: 6px 0;
-                font-size: 0.95rem;
-                column-gap: 16px;
-            }
+      @keyframes text-flicker {
+        0%,
+        100% {
+          opacity: 1;
+        }
 
-            .status-row span {
-                color: var(--muted);
-            }
+        41.99% {
+          opacity: 1;
+        }
 
-            .grid {
-                margin: 40px 0;
-                display: grid;
-                gap: 18px;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            }
+        42% {
+          opacity: 0.8;
+        }
 
-            .panel {
-                background: var(--panel);
-                border-radius: 16px;
-                padding: 20px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                box-shadow: var(--shadow);
-            }
+        43% {
+          opacity: 1;
+        }
 
-            .panel h3 {
-                margin-top: 0;
-                font-family: "Bungee", sans-serif;
-                text-transform: uppercase;
-                font-size: 1.05rem;
-            }
+        45.99% {
+          opacity: 1;
+        }
 
-            .panel p {
-                color: var(--muted);
-                line-height: 1.5;
-            }
+        46% {
+          opacity: 0.7;
+        }
 
-            .panel code {
-                display: block;
-                margin-top: 12px;
-                background: #0d1310;
-                padding: 10px 12px;
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                color: var(--acid);
-                font-size: 0.88rem;
-            }
+        46.5% {
+          opacity: 1;
+        }
+      }
 
-            .ribbon {
-                margin: 38px 0 22px;
-                padding: 14px 18px;
-                border-radius: 14px;
-                background: linear-gradient(
-                    120deg,
-                    rgba(255, 155, 84, 0.15),
-                    rgba(168, 255, 62, 0.15)
-                );
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                display: flex;
-                justify-content: space-between;
-                gap: 16px;
-                flex-wrap: wrap;
-                align-items: center;
-            }
+      .status-badge {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
 
-            .ribbon strong {
-                font-family: "Bungee", sans-serif;
-                text-transform: uppercase;
-                font-size: 1rem;
-            }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border: 1px solid var(--terminal-green);
+        background: rgba(0, 255, 65, 0.1);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 0 5px var(--border-glow);
+        white-space: nowrap;
+      }
 
-            .art-grid {
-                margin: 26px 0 42px;
-                display: grid;
-                gap: 18px;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            }
+      .badge::before {
+        content: "●";
+        animation: blink 1.5s infinite;
+      }
 
-            .art-card {
-                background: var(--panel);
-                border-radius: 18px;
-                padding: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                box-shadow: var(--shadow);
-                position: relative;
-                overflow: hidden;
-                min-height: 200px;
-                display: grid;
-                gap: 12px;
-                align-content: start;
-            }
+      .badge.online::before {
+        color: var(--terminal-green);
+      }
 
-            .art-card::after {
-                content: "Mostly Harmless";
-                position: absolute;
-                bottom: 12px;
-                right: 12px;
-                font-size: 0.75rem;
-                letter-spacing: 0.8px;
-                color: rgba(255, 255, 255, 0.5);
-                text-transform: uppercase;
-            }
+      .badge.alert::before {
+        color: var(--red);
+      }
 
-            .art-svg {
-                width: 100%;
-                height: 160px;
-                display: block;
-                filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.35));
-                animation: float 5s ease-in-out infinite;
-            }
+      @keyframes blink {
+        0%,
+        49% {
+          opacity: 1;
+        }
 
-            .sticker {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 6px 12px;
-                border-radius: 999px;
-                background: rgba(210, 77, 31, 0.16);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                font-size: 0.85rem;
-            }
+        50%,
+        100% {
+          opacity: 0;
+        }
+      }
 
-            .faq {
-                display: grid;
-                gap: 16px;
-            }
+      /* HERO TERMINAL */
+      .terminal {
+        background: var(--panel-bg);
+        border: 3px solid var(--terminal-green);
+        margin: 20px 0;
+        box-shadow:
+          0 0 30px var(--border-glow),
+          inset 0 0 30px rgba(0, 255, 65, 0.05);
+        position: relative;
+        overflow: hidden;
+      }
 
-            .faq-item {
-                background: var(--panel);
-                padding: 18px;
-                border-radius: 14px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-            }
+      .terminal-header {
+        background: var(--terminal-green);
+        color: #000;
+        padding: 8px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: "VT323", monospace;
+        font-size: 18px;
+        letter-spacing: 2px;
+      }
 
-            .faq-item h4 {
-                margin: 0 0 10px;
-                font-size: 1rem;
-            }
+      .terminal-controls {
+        display: flex;
+        gap: 8px;
+      }
 
-            .footer {
-                margin-top: 40px;
-                text-align: center;
-                color: var(--muted);
-                font-size: 0.9rem;
-            }
+      .terminal-controls span {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+      }
 
-            .easter-egg {
-                position: fixed;
-                right: 18px;
-                bottom: 18px;
-                max-width: 260px;
-                background: #0d1310;
-                border-radius: 14px;
-                padding: 14px 16px;
-                border: 1px solid rgba(168, 255, 62, 0.6);
-                box-shadow: var(--shadow);
-                opacity: 0;
-                transform: translateY(12px) scale(0.98);
-                pointer-events: none;
-                transition:
-                    opacity 180ms ease,
-                    transform 180ms ease;
-                z-index: 20;
-            }
+      .terminal-controls .close {
+        background: var(--red);
+      }
 
-            .easter-egg.show {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-                pointer-events: auto;
-            }
+      .terminal-controls .minimize {
+        background: var(--yellow);
+      }
 
-            .egg-title {
-                font-family: "Bungee", sans-serif;
-                text-transform: uppercase;
-                font-size: 0.9rem;
-                margin-bottom: 6px;
-            }
+      .terminal-controls .maximize {
+        background: var(--terminal-green-dim);
+      }
 
-            .easter-egg p {
-                margin: 0 0 10px;
-                color: var(--muted);
-                font-size: 0.85rem;
-            }
+      .terminal-body {
+        padding: 30px;
+        font-family: "Share Tech Mono", monospace;
+        line-height: 1.8;
+      }
 
-            .egg-close {
-                background: transparent;
-                color: var(--ink);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 999px;
-                padding: 4px 10px;
-                font-size: 0.75rem;
-                cursor: pointer;
-            }
+      .terminal-prompt {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        color: var(--terminal-green);
+        min-height: 24px;
+        align-items: center;
+      }
 
-            .egg-close:hover,
-            .egg-close:focus-visible {
-                border-color: var(--acid);
-            }
+      .terminal-prompt::before {
+        content: ">";
+        color: var(--cyan);
+        font-weight: bold;
+      }
 
-            .pulse {
-                position: relative;
-            }
+      .cursor {
+        display: inline-block;
+        width: 10px;
+        height: 20px;
+        background: var(--terminal-green);
+        animation: blink 1s infinite;
+        margin-left: 4px;
+      }
 
-            .pulse::after {
-                content: "";
-                position: absolute;
-                inset: -6px;
-                border-radius: 12px;
-                border: 1px solid rgba(168, 255, 62, 0.5);
-                opacity: 0;
-                animation: ping 2.4s infinite;
-                pointer-events: none;
-            }
+      .terminal h1 {
+        font-family: "VT323", monospace;
+        font-size: 3.5rem;
+        margin: 20px 0;
+        text-transform: uppercase;
+        color: var(--cyan);
+        text-shadow:
+          0 0 10px var(--cyan-glow),
+          0 0 20px var(--cyan-glow),
+          0 0 30px var(--cyan-glow);
+        letter-spacing: 4px;
+      }
 
-            .reveal {
-                opacity: 0;
-                transform: translateY(12px);
-                animation: reveal 0.9s ease forwards;
-                animation-delay: var(--delay, 0s);
-            }
+      .tagline {
+        color: var(--terminal-green-dim);
+        font-size: 1.1rem;
+        margin: 20px 0;
+        line-height: 1.6;
+      }
 
-            @keyframes ping {
-                0% {
-                    opacity: 0;
-                    transform: scale(0.9);
-                }
-                40% {
-                    opacity: 0.5;
-                }
-                100% {
-                    opacity: 0;
-                    transform: scale(1.15);
-                }
-            }
+      .data-stream {
+        font-family: "VT323", monospace;
+        font-size: 14px;
+        color: var(--terminal-dim);
+        margin: 20px 0;
+        padding: 15px;
+        border-left: 3px solid var(--terminal-green);
+        background: rgba(0, 255, 65, 0.03);
+        overflow: hidden;
+        max-height: 100px;
+      }
 
-            @keyframes reveal {
-                from {
-                    opacity: 0;
-                    transform: translateY(12px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
+      .data-stream span {
+        opacity: 0;
+        animation: stream-in 0.1s forwards;
+      }
 
-            @keyframes float {
-                0%,
-                100% {
-                    transform: translateY(0);
-                }
-                50% {
-                    transform: translateY(-8px);
-                }
-            }
+      @keyframes stream-in {
+        to {
+          opacity: 1;
+        }
+      }
 
-            @media (max-width: 720px) {
-                header {
-                    flex-direction: column;
-                    align-items: flex-start;
-                }
+      /* BUTTONS */
+      .actions {
+        margin-top: 30px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
 
-                nav a {
-                    margin-left: 0;
-                    margin-right: 12px;
-                }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        padding: 14px 24px;
+        border: 2px solid var(--terminal-green);
+        font-weight: 700;
+        letter-spacing: 2px;
+        background: rgba(0, 255, 65, 0.1);
+        color: var(--terminal-green);
+        text-transform: uppercase;
+        font-size: 14px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 10px var(--border-glow);
+        font-family: "Rajdhani", sans-serif;
+      }
 
-                .ribbon {
-                    flex-direction: column;
-                    align-items: flex-start;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="page">
-            <header>
-                <div class="logo">
-                    <div class="logo-badge" aria-hidden="true"></div>
-                    <div class="logo-title">C:BN Data Bunker</div>
-                </div>
-                <nav>
-                    <a href="#about">About</a>
-                    <a href="#improbability">Improbability</a>
-                    <a href="#endpoints">Endpoints</a>
-                    <a href="#faq">FAQ</a>
-                </nav>
-            </header>
+      .btn::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(0, 255, 65, 0.3),
+          transparent
+        );
+        transition: left 0.5s;
+      }
 
-            <section class="hero" id="about">
-                <div class="hero-card pulse reveal" style="--delay: 0.05s">
-                    <div class="dont-panic">Dont Panic</div>
-                    <h1>The Hitchhiker's Guide to C:BN Data</h1>
-                    <p class="tagline">
-                        Your improbably accurate guide to Cataclysm: Bright
-                        Nights data. JSON, translations, and GFX assets
-                        delivered faster than a towel can be waved. 42 percent
-                        more helpful.
-                    </p>
-                    <div class="quip" id="quip">1099 commits and counting.</div>
-                    <div class="actions">
-                        <a class="btn" href="/builds.json">Grab builds.json</a>
-                        <a
-                            class="btn secondary"
-                            href="https://cbn-guide.pages.dev/"
-                            >Visit the Guide</a
-                        >
-                    </div>
-                </div>
+      .btn:hover::before {
+        left: 100%;
+      }
 
-                <div class="hero-card status reveal" style="--delay: 0.15s">
-                    <h2>Improbability Console</h2>
-                    <div class="status-card">
-                        <div class="status-row">
-                            <strong>Mirror State</strong>
-                            <span>Mostly hydrated</span>
-                        </div>
-                        <div class="status-row">
-                            <strong>Compression</strong>
-                            <span>Gzip and Brotli, double frothy</span>
-                        </div>
-                        <div class="status-row">
-                            <strong>Asset Vault</strong>
-                            <span>WebP only, no hoarding PNGs</span>
-                        </div>
-                        <div class="status-row">
-                            <strong>Towel Inventory</strong>
-                            <span>Always within arm reach</span>
-                        </div>
-                    </div>
-                    <p class="tagline">
-                        If you hear a faint hiss, that is just the brotli
-                        chamber venting happy little bytes and tiny existential
-                        questions.
-                    </p>
-                </div>
-            </section>
+      .btn:hover {
+        background: var(--terminal-green);
+        color: #000;
+        box-shadow:
+          0 0 20px var(--terminal-green-glow),
+          0 0 40px var(--terminal-green-glow);
+        transform: translateY(-3px);
+      }
 
-            <div class="ribbon reveal" style="--delay: 0.25s">
-                <strong>Pro Tip From The Guide</strong>
-                <span
-                    >Start with `builds.json`, pick a date, then dive into
-                    `/data/DATE/` like a fearless intern with a towel.</span
-                >
+      .btn.secondary {
+        border-color: var(--cyan);
+        color: var(--cyan);
+        box-shadow: 0 0 10px var(--cyan-glow);
+      }
+
+      .btn.secondary:hover {
+        background: var(--cyan);
+        color: #000;
+        box-shadow:
+          0 0 20px var(--cyan-glow),
+          0 0 40px var(--cyan-glow);
+      }
+
+      .btn.danger {
+        border-color: var(--magenta);
+        color: var(--magenta);
+        box-shadow: 0 0 10px var(--magenta-glow);
+      }
+
+      .btn.danger:hover {
+        background: var(--magenta);
+        color: #000;
+        box-shadow:
+          0 0 20px var(--magenta-glow),
+          0 0 40px var(--magenta-glow);
+      }
+
+      /* GRID PANELS */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin: 30px 0;
+      }
+
+      .panel {
+        display: flex;
+        flex-direction: column;
+        background: var(--panel-bg);
+        border: 2px solid var(--terminal-green);
+        padding: 20px;
+        box-shadow:
+          0 0 15px var(--border-glow),
+          inset 0 0 15px rgba(0, 255, 65, 0.03);
+        position: relative;
+        transition: all 0.3s ease;
+      }
+
+      .panel::before {
+        content: "█";
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        color: var(--terminal-green);
+        font-size: 20px;
+        line-height: 1;
+        text-shadow: 0 0 10px var(--terminal-green-glow);
+      }
+
+      .panel:hover {
+        border-color: var(--cyan);
+        box-shadow:
+          0 0 25px var(--cyan-glow),
+          inset 0 0 25px rgba(0, 255, 255, 0.05);
+        transform: translateY(-5px);
+      }
+
+      .panel:hover::before {
+        color: var(--cyan);
+        text-shadow: 0 0 10px var(--cyan-glow);
+      }
+
+      .panel-content {
+        flex: 1;
+      }
+
+      .panel h3 {
+        font-family: "Rajdhani", sans-serif;
+        text-transform: uppercase;
+        font-size: 1.3rem;
+        margin: 0 0 15px;
+        color: var(--terminal-green);
+        letter-spacing: 2px;
+        text-shadow: 0 0 10px var(--terminal-green-glow);
+      }
+
+      .panel p {
+        color: var(--terminal-dim);
+        line-height: 1.6;
+        margin: 10px 0;
+      }
+
+      .panel code {
+        margin-top: auto;
+        display: block;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 12px;
+        border-left: 3px solid var(--cyan);
+        color: var(--cyan);
+        font-size: 13px;
+        overflow-x: auto;
+        text-shadow: 0 0 5px var(--cyan-glow);
+        position: relative;
+      }
+
+      .panel code:hover {
+        background: rgba(0, 255, 255, 0.1);
+        border-color: var(--terminal-green);
+      }
+
+      .panel code::after {
+        content: "◧";
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+        color: var(--terminal-dim);
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .panel code:hover::after {
+        opacity: 1;
+      }
+
+      .panel code.copied::after {
+        content: "✓";
+        color: var(--terminal-green);
+        opacity: 1;
+        font-size: 20px;
+      }
+
+      /* STATUS PANEL */
+      .status-grid {
+        display: grid;
+        gap: 10px;
+        margin: 20px 0;
+      }
+
+      .status-row {
+        display: grid;
+        grid-template-columns: 180px 1fr auto;
+        align-items: center;
+        padding: 10px;
+        background: rgba(0, 255, 65, 0.03);
+        border-left: 2px solid var(--terminal-green);
+        gap: 15px;
+      }
+
+      .status-row:hover {
+        background: rgba(0, 255, 65, 0.08);
+      }
+
+      .status-row .label {
+        color: var(--terminal-green);
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 13px;
+      }
+
+      .status-row .value {
+        color: var(--terminal-dim);
+        font-family: "Share Tech Mono", monospace;
+      }
+
+      .status-row .indicator {
+        font-family: "VT323", monospace;
+        color: var(--cyan);
+        font-size: 18px;
+      }
+
+      /* ASCII ART */
+      .ascii-art {
+        font-family: "VT323", monospace;
+        font-size: 10px;
+        line-height: 1;
+        color: var(--terminal-green);
+        text-shadow: 0 0 5px var(--terminal-green-glow);
+        white-space: pre;
+        overflow-x: auto;
+        text-align: center;
+        margin: 30px 0;
+        padding: 20px;
+        border: 1px dashed var(--terminal-dim);
+        background: rgba(0, 255, 65, 0.02);
+      }
+
+      /* MATRIX RAIN BACKGROUND */
+      .matrix-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+        opacity: 0.15;
+      }
+
+      .matrix-column {
+        position: absolute;
+        font-family: "VT323", monospace;
+        font-size: 14px;
+        color: var(--terminal-green);
+        text-shadow: 0 0 8px var(--terminal-green-glow);
+        white-space: pre;
+        animation: matrix-fall linear infinite;
+      }
+
+      @keyframes matrix-fall {
+        0% {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+
+        10% {
+          opacity: 1;
+        }
+
+        90% {
+          opacity: 1;
+        }
+
+        100% {
+          transform: translateY(100vh);
+          opacity: 0;
+        }
+      }
+
+      /* GLITCH EFFECT - REMOVED PER USER REQUEST */
+      .glitch {
+        position: relative;
+      }
+
+      @keyframes glitch {
+        0% {
+          transform: translate(0);
+        }
+
+        20% {
+          transform: translate(-2px, 2px);
+        }
+
+        40% {
+          transform: translate(-2px, -2px);
+        }
+
+        60% {
+          transform: translate(2px, 2px);
+        }
+
+        80% {
+          transform: translate(2px, -2px);
+        }
+
+        100% {
+          transform: translate(0);
+        }
+      }
+
+      /* SECTION HEADERS */
+      .section-header {
+        font-family: "VT323", monospace;
+        font-size: 2rem;
+        color: var(--cyan);
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        margin: 40px 0 20px;
+        padding: 15px 20px;
+        background: rgba(0, 255, 255, 0.05);
+        border-left: 5px solid var(--cyan);
+        border-right: 5px solid var(--cyan);
+        text-shadow:
+          0 0 10px var(--cyan-glow),
+          0 0 20px var(--cyan-glow);
+        position: relative;
+      }
+
+      .section-header::before {
+        content: "// ";
+        color: var(--terminal-dim);
+      }
+
+      .section-header::after {
+        content: " //";
+        color: var(--terminal-dim);
+      }
+
+      /* FOOTER */
+      .footer {
+        margin-top: 60px;
+        padding: 30px 20px;
+        border-top: 2px solid var(--terminal-green);
+        text-align: center;
+        color: var(--terminal-dim);
+        font-size: 13px;
+        letter-spacing: 1px;
+        background: rgba(0, 255, 65, 0.02);
+      }
+
+      .footer a {
+        color: var(--cyan);
+        text-decoration: none;
+        border-bottom: 1px solid var(--cyan);
+      }
+
+      .footer a:hover {
+        color: var(--terminal-green);
+        text-shadow: 0 0 10px var(--terminal-green-glow);
+      }
+
+      /* ALERT BOX */
+      .alert {
+        background: rgba(255, 0, 80, 0.1);
+        border: 2px solid var(--red);
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow:
+          0 0 20px var(--red-glow),
+          inset 0 0 20px rgba(255, 0, 80, 0.05);
+      }
+
+      .alert::before {
+        content: "⚠ WARNING ⚠";
+        display: block;
+        font-family: "VT323", monospace;
+        font-size: 24px;
+        color: var(--red);
+        text-align: center;
+        margin-bottom: 10px;
+        letter-spacing: 4px;
+        text-shadow:
+          0 0 10px var(--red-glow),
+          0 0 20px var(--red-glow);
+      }
+
+      .alert p {
+        color: var(--terminal-green);
+        text-align: center;
+        margin: 0;
+      }
+
+      /* RESPONSIVE */
+      @media (max-width: 768px) {
+        .logo-title {
+          font-size: 1.8rem;
+          letter-spacing: 2px;
+        }
+
+        .terminal h1 {
+          font-size: 2.5rem;
+        }
+
+        .logo-container {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .status-row {
+          grid-template-columns: 1fr;
+          gap: 5px;
+        }
+
+        .ascii-art {
+          font-size: 8px;
+        }
+      }
+
+      /* SCROLL INDICATOR */
+      .scroll-indicator {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: var(--terminal-green);
+        font-family: "VT323", monospace;
+        font-size: 20px;
+        animation: bounce 2s infinite;
+        z-index: 10;
+        text-shadow: 0 0 10px var(--terminal-green-glow);
+      }
+
+      @keyframes bounce {
+        0%,
+        20%,
+        50%,
+        80%,
+        100% {
+          transform: translateX(-50%) translateY(0);
+        }
+
+        40% {
+          transform: translateX(-50%) translateY(-10px);
+        }
+
+        60% {
+          transform: translateX(-50%) translateY(-5px);
+        }
+      }
+
+      /* LOADING INDICATOR */
+      .loading {
+        display: inline-block;
+      }
+
+      .loading::after {
+        content: "";
+        animation: loading 1.5s infinite;
+      }
+
+      @keyframes loading {
+        0% {
+          content: ".";
+        }
+
+        33% {
+          content: "..";
+        }
+
+        66% {
+          content: "...";
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Matrix Rain -->
+    <div class="matrix-container" id="matrix"></div>
+
+    <div class="page">
+      <!-- Header -->
+      <header>
+        <div class="logo-container">
+          <div class="logo">
+            <img
+              class="logo-ascii"
+              src="skeleton.png"
+              alt="Skeleton reading data"
+            />
+            <div>
+              <div class="logo-title">C:BN DATA VAULT</div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--terminal-dim);
+                  letter-spacing: 2px;
+                "
+              >
+                WASTELAND DATA TERMINAL v2.42
+              </div>
             </div>
+          </div>
+          <div class="status-badge">
+            <div class="badge online">ONLINE</div>
+            <div class="badge online">SECURE</div>
+            <div class="badge alert">HOT</div>
+          </div>
+        </div>
+      </header>
 
-            <section
-                class="art-grid"
-                id="improbability"
-                aria-label="Improbable art gallery"
+      <!-- Main Terminal -->
+      <div class="terminal ascii-border">
+        <div class="terminal-header">
+          <span>ROOT@BUNKER:~/DATA/CBN</span>
+          <div class="terminal-controls">
+            <span class="close"></span>
+            <span class="minimize"></span>
+            <span class="maximize"></span>
+          </div>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-prompt" id="boot-line-1">
+            <span>Initializing data vault access</span>
+            <span style="color: var(--terminal-green)">[OK]</span>
+          </div>
+          <div class="terminal-prompt" id="boot-line-2">
+            <span>Decrypting asset manifest</span>
+            <span style="color: var(--red)">[FAIL]</span>
+          </div>
+          <div class="terminal-prompt" id="boot-line-3">
+            <span>Retrying with backup protocol</span>
+            <span style="color: var(--terminal-green)">[OK]</span>
+          </div>
+
+          <h1 class="glitch">WASTELAND DATA TERMINAL</h1>
+
+          <p class="tagline">
+            <strong style="color: var(--cyan)">CLASSIFIED ACCESS:</strong>
+            Complete Cataclysm: Bright Nights data mirror. JSON game objects,
+            translation files, GFX assets, and build metadata. Optimized for
+            bandwidth-starved survivors with Brotli compression and WebP
+            graphics. No towels required, but recommended.
+          </p>
+
+          <div class="data-stream" id="data-stream">
+            <span>0x000000: 7B 22 62 75 69 6C 64 73 22 3A 20 5B 7B 22 64</span
+            ><br />
+            <span
+              >0x000010: 61 74 65 22 3A 20 22 32 30 32 35 2D 30 31 2D 30</span
+            ><br />
+            <span
+              >0x000020: 39 22 2C 20 22 74 79 70 65 22 3A 20 22 73 74 61</span
+            ><br />
+            <span
+              >0x000030: 62 6C 65 22 2C 20 22 63 6F 6D 70 72 65 73 73 69</span
+            ><br />
+            <span
+              >0x000040: 6F 6E 22 3A 20 22 62 72 6F 74 6C 69 22 7D 5D 7D</span
             >
-                <div class="art-card reveal" style="--delay: 0.3s">
-                    <div class="sticker">Infinite Improbability Drive</div>
-                    <svg
-                        class="art-svg"
-                        viewBox="0 0 320 160"
-                        role="img"
-                        aria-label="Swirling improbability engine"
-                    >
-                        <defs>
-                            <linearGradient
-                                id="spiral"
-                                x1="0"
-                                x2="1"
-                                y1="0"
-                                y2="1"
-                            >
-                                <stop offset="0%" stop-color="#a8ff3e" />
-                                <stop offset="50%" stop-color="#6ee7ff" />
-                                <stop offset="100%" stop-color="#ff9b54" />
-                            </linearGradient>
-                        </defs>
-                        <rect width="320" height="160" rx="18" fill="#0d1310" />
-                        <path
-                            d="M40 80c40-60 100-60 140 0s100 60 140 0"
-                            fill="none"
-                            stroke="url(#spiral)"
-                            stroke-width="10"
-                            stroke-linecap="round"
-                        />
-                        <circle
-                            cx="80"
-                            cy="80"
-                            r="28"
-                            fill="none"
-                            stroke="#ff9b54"
-                            stroke-width="6"
-                        />
-                        <circle
-                            cx="160"
-                            cy="80"
-                            r="44"
-                            fill="none"
-                            stroke="#a8ff3e"
-                            stroke-width="6"
-                        />
-                        <circle
-                            cx="240"
-                            cy="80"
-                            r="28"
-                            fill="none"
-                            stroke="#6ee7ff"
-                            stroke-width="6"
-                        />
-                        <text
-                            x="160"
-                            y="92"
-                            text-anchor="middle"
-                            fill="#e6f2e2"
-                            font-size="16"
-                        >
-                            42
-                        </text>
-                    </svg>
-                </div>
-                <div class="art-card reveal" style="--delay: 0.4s">
-                    <div class="sticker">Babel Fish Translation Rig</div>
-                    <svg
-                        class="art-svg"
-                        viewBox="0 0 320 160"
-                        role="img"
-                        aria-label="Babel fish translation rig"
-                    >
-                        <rect width="320" height="160" rx="18" fill="#0d1310" />
-                        <ellipse
-                            cx="100"
-                            cy="80"
-                            rx="48"
-                            ry="30"
-                            fill="#6ee7ff"
-                            opacity="0.8"
-                        />
-                        <ellipse
-                            cx="220"
-                            cy="80"
-                            rx="48"
-                            ry="30"
-                            fill="#a8ff3e"
-                            opacity="0.7"
-                        />
-                        <path
-                            d="M130 80h60"
-                            stroke="#ff9b54"
-                            stroke-width="8"
-                            stroke-linecap="round"
-                        />
-                        <circle cx="70" cy="80" r="10" fill="#0b0f0d" />
-                        <circle cx="250" cy="80" r="10" fill="#0b0f0d" />
-                        <text
-                            x="160"
-                            y="130"
-                            text-anchor="middle"
-                            fill="#e6f2e2"
-                            font-size="14"
-                        >
-                            Universal Translator
-                        </text>
-                    </svg>
-                </div>
-                <div class="art-card reveal" style="--delay: 0.5s">
-                    <div class="sticker">Pan Galactic Data Blaster</div>
-                    <svg
-                        class="art-svg"
-                        viewBox="0 0 320 160"
-                        role="img"
-                        aria-label="Pan Galactic Data Blaster"
-                    >
-                        <rect width="320" height="160" rx="18" fill="#0d1310" />
-                        <polygon
-                            points="40,120 120,40 280,60 200,140"
-                            fill="#ff9b54"
-                            opacity="0.8"
-                        />
-                        <circle cx="120" cy="60" r="20" fill="#a8ff3e" />
-                        <circle
-                            cx="240"
-                            cy="110"
-                            r="26"
-                            fill="#6ee7ff"
-                            opacity="0.9"
-                        />
-                        <path
-                            d="M70 130c20-10 40-10 60 0"
-                            stroke="#e6f2e2"
-                            stroke-width="4"
-                            stroke-linecap="round"
-                        />
-                        <text
-                            x="160"
-                            y="90"
-                            text-anchor="middle"
-                            fill="#0b0f0d"
-                            font-size="12"
-                        >
-                            DATA
-                        </text>
-                    </svg>
-                </div>
-            </section>
+          </div>
 
-            <section class="grid reveal" id="endpoints" style="--delay: 0.6s">
-                <div class="panel">
-                    <h3>Build Index</h3>
-                    <p>
-                        Metadata for every snapshot. Great for cron jobs,
-                        dashboards, and dramatic monologues.
-                    </p>
-                    <code>/builds.json</code>
-                </div>
-                <div class="panel">
-                    <h3>Game Objects</h3>
-                    <p>
-                        Everything the game knows, in one deliciously large JSON
-                        file. It knows too much.
-                    </p>
-                    <code>/data/2025-12-31/all.json</code>
-                </div>
-                <div class="panel">
-                    <h3>Mod Catalog</h3>
-                    <p>
-                        All mods, all at once, no scavenging required. Bring
-                        snacks anyway.
-                    </p>
-                    <code>/data/2025-12-31/all_mods.json</code>
-                </div>
-                <div class="panel">
-                    <h3>Translations</h3>
-                    <p>
-                        Localized strings for when your bunker goes
-                        interstellar.
-                    </p>
-                    <code>/data/2025-12-31/lang/fr.json</code>
-                </div>
-                <div class="panel">
-                    <h3>GFX Assets</h3>
-                    <p>
-                        WebP sprites, compressed to survive both bandwidth and
-                        existential dread.
-                    </p>
-                    <code>/data/2025-12-31/gfx/</code>
-                </div>
-                <div class="panel">
-                    <h3>Extra Crunch</h3>
-                    <p>
-                        Use `.gz` or `.br` files for peak performance and
-                        minimal screaming.
-                    </p>
-                    <code>/data/1964-01-08/all.json</code>
-                </div>
-            </section>
+          <div class="actions">
+            <a class="btn" href="/builds.json">
+              <span>▶</span> ACCESS BUILDS.JSON
+            </a>
+            <a class="btn secondary" href="https://cbn-guide.pages.dev/">
+              <span>◉</span> LAUNCH GUIDE
+            </a>
+            <a class="btn danger" href="#endpoints">
+              <span>⚡</span> VIEW ENDPOINTS
+            </a>
+          </div>
+        </div>
+      </div>
 
-            <section class="panel reveal" style="--delay: 0.7s">
-                <h3>Quickstart Command Line</h3>
-                <p>
-                    Because typing by hand is how you get eaten by an angry JSON
-                    parser.
-                </p>
-                <code
-                    >curl -s https://cbn-data.pages.dev/builds.json | jq
-                    '.[0]'</code
-                >
-                <code
-                    >curl -s https://cbn-data.pages.dev/data/2025-12-31/all.json
-                    --output all.json</code
-                >
-            </section>
+      <!-- System Status -->
+      <div class="section-header">SYSTEM STATUS</div>
 
-            <section class="faq reveal" id="faq" style="--delay: 0.8s">
-                <div class="faq-item">
-                    <h4>Is this safe?</h4>
-                    <p>
-                        It is as safe as any bunker full of compressed game
-                        data. No zombies inside, just bytes.
-                    </p>
-                </div>
-                <div class="faq-item">
-                    <h4>Why so many files?</h4>
-                    <p>
-                        Because history matters, and also because future you
-                        will blame past you if you prune too hard.
-                    </p>
-                </div>
-                <div class="faq-item">
-                    <h4>Can I cache it?</h4>
-                    <p>
-                        Yes. Cache it like you cache canned beans. The headers
-                        are already doing most of the work.
-                    </p>
-                </div>
-                <div class="faq-item">
-                    <h4>Where did this data come from?</h4>
-                    <p>
-                        Direct from Cataclysm: Bright Nights releases, freshly
-                        washed and mostly sorted.
-                    </p>
-                </div>
-            </section>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-content">
+            <h3>▼ MIRROR STATE</h3>
+            <div class="status-grid">
+              <div class="status-row">
+                <span class="label">Data Sync</span>
+                <span class="value">Every 12 hours</span>
+                <span class="indicator">◉</span>
+              </div>
+              <div class="status-row">
+                <span class="label">Compression</span>
+                <span class="value">Brotli</span>
+                <span class="indicator">◉</span>
+              </div>
+              <div class="status-row">
+                <span class="label">Uptime</span>
+                <span class="value">99.9% stable</span>
+                <span class="indicator">◉</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            <div class="footer">
-                Built for The Hitchhiker's Guide to Cataclysm: Bright Nights.
-                Now featuring 0.4 percent more apocalypse.
+        <div class="panel">
+          <div class="panel-content">
+            <h3>▼ ASSET VAULT</h3>
+            <div class="status-grid">
+              <div class="status-row">
+                <span class="label">Graphics</span>
+                <span class="value">WebP optimized</span>
+                <span class="indicator">◉</span>
+              </div>
+              <div class="status-row">
+                <span class="label">Translations</span>
+                <span class="value">Multi-lang ready</span>
+                <span class="indicator">◉</span>
+              </div>
+              <div class="status-row">
+                <span class="label">Builds</span>
+                <span class="value">450-day history</span>
+                <span class="indicator">◉</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Endpoints -->
+      <div class="section-header" id="endpoints">DATA ENDPOINTS</div>
+
+      <div class="grid">
+        <div class="panel">
+          <h3>█ BUILD INDEX</h3>
+          <p>
+            Master manifest with metadata for every build snapshot. Your
+            starting point for temporal navigation.
+          </p>
+          <code>/builds.json</code>
+        </div>
+
+        <div class="panel">
+          <h3>█ GAME OBJECTS</h3>
+          <p>
+            Complete game database: items, monsters, vehicles, recipes.
+            Everything the wasteland knows.
+          </p>
+          <code>/data/{RELEASE}/all.json</code>
+        </div>
+
+        <div class="panel">
+          <h3>█ MOD CATALOG</h3>
+          <p>
+            Full mod repository with metadata. No scavenging required, just
+            direct access.
+          </p>
+          <code>/data/{RELEASE}/all_mods.json</code>
+        </div>
+
+        <div class="panel">
+          <h3>█ TRANSLATIONS</h3>
+          <p>
+            Localized strings for international survivors. Multi-language
+            wasteland support.
+          </p>
+          <code>/data/{RELEASE}/lang/zh_CN.json</code>
+        </div>
+
+        <div class="panel">
+          <h3>█ GFX ASSETS</h3>
+          <p>
+            WebP-compressed tilesets and sprites. Bandwidth optimized for slow
+            uplinks.
+          </p>
+          <code>/data/{RELEASE}/gfx/</code>
+        </div>
+
+        <div class="panel">
+          <h3>█ COMPRESSION</h3>
+          <p>
+            All JSON files are Brotli-compressed by default. Saves ~90%
+            bandwidth. Cloudflare handles decompression.
+          </p>
+          <code>Content-Encoding: br</code>
+        </div>
+      </div>
+
+      <!-- Alert Box -->
+      <div class="alert">
+        <p>
+          <strong>SURVIVOR PROTOCOL:</strong> Always start with
+          <code style="color: var(--cyan)">/builds.json</code> to get available
+          dates, then navigate to
+          <code style="color: var(--cyan)">/data/DATE/</code> for your target
+          build. Check the guide at
+          <a
+            href="https://cbn-guide.pages.dev/"
+            style="color: var(--terminal-green)"
+            >cbn-guide.pages.dev</a
+          >
+          for integration examples.
+        </p>
+      </div>
+
+      <!-- Command Examples -->
+      <div class="section-header">TERMINAL COMMANDS</div>
+
+      <div class="panel">
+        <h3>▼ QUICKSTART EXAMPLES</h3>
+        <p style="color: var(--terminal-green-dim)">
+          Because typing by hand builds character, but these commands save time:
+        </p>
+        <code># Fetch build index<br />curl -s https://cbn-data.pages.dev/builds.json | jq '.[0]'</code>
+        <code># Download complete game data<br />curl -s https://cbn-data.pages.dev/data/{RELEASE}/all.json -o all.json</code>
+        <code># Get Chinese translations with pinyin<br />curl -s https://cbn-data.pages.dev/data/{RELEASE}/lang/zh_CN_pinyin.json -o zh_CN.json</code>
+        <code># List available builds<br />curl -s https://cbn-data.pages.dev/builds.json | jq '.[].date'</code>
+      </div>
+
+      <!-- FAQ -->
+      <div class="section-header">FREQUENTLY ASKED</div>
+
+      <div class="grid">
+        <div class="panel">
+          <h3>▼ IS THIS SAFE?</h3>
+          <p>
+            Data pulled directly from official Cataclysm: Bright Nights
+            releases. No zombies, just bytes. Cloudflare Pages hosting ensures
+            high availability.
+          </p>
+        </div>
+
+        <div class="panel">
+          <h3>▼ WHY SO MANY FILES?</h3>
+          <p>
+            Historical builds preserved for modding, debugging, and temporal
+            archaeology. Retention policy prunes ancient snapshots
+            automatically.
+          </p>
+        </div>
+
+        <div class="panel">
+          <h3>▼ CAN I CACHE THIS?</h3>
+          <p>
+            Yes. Cache aggressively. Headers already set for optimal CDN
+            behavior. Treat it like canned goods—store and forget.
+          </p>
+        </div>
+
+        <div class="panel">
+          <h3>▼ COMPRESSION DETAILS?</h3>
+          <p>
+            All JSON files served Brotli-compressed via Cloudflare headers. ~90%
+            size reduction. No client-side decompression needed.
+          </p>
+        </div>
+      </div>
+
+    <!-- Current Maintainers -->
+    <div class="section-header">CURRENT SPONSORS</div>
+    
+    <div class="grid">
+        <div class="panel">
+            <h3>█ ARTHUR DENT</h3>
+            <p style="color: var(--terminal-dim)">
+                Reluctant Survivor
+            </p>
+            <p>
+                Lost in nested containers. Keeps losing aspirin inside three layers of plastic bags.
+            </p>
+            <div
+                style="margin-top: 15px; padding: 8px; background: rgba(0, 255, 65, 0.05); border-left: 2px solid var(--terminal-green);">
+                <span style="color: var(--terminal-green); font-weight: bold;">Morale:</span>
+                <span style="color: var(--cyan)">Leaping</span>
             </div>
         </div>
-
-        <div class="easter-egg" id="easter-egg" aria-hidden="true">
-            <div class="egg-title">Towel Protocol Engaged</div>
-            <p>
-                You found the improbability cache. Reward: one shiny data byte
-                and a stern warning about Vogon poetry.
+    
+        <div class="panel">
+            <h3>█ FORD PREFECT</h3>
+            <p style="color: var(--terminal-dim)">
+                Bored Expert
             </p>
-            <button class="egg-close" type="button" aria-label="Dismiss">
-                Hide Again
-            </button>
+            <p>
+                Suffers from static spawn fatigue. Craves exotic NPCs and a sub-ether network.
+            </p>
+            <div
+                style="margin-top: 15px; padding: 8px; background: rgba(255, 255, 0, 0.05); border-left: 2px solid var(--yellow);">
+                <span style="color: var(--terminal-green); font-weight: bold;">Mood:</span>
+                <span style="color: var(--yellow)">Debuffed</span>
+            </div>
         </div>
+    
+        <div class="panel">
+            <h3>█ MARVIN</h3>
+            <p style="color: var(--terminal-dim)">
+                Overqualified Android
+            </p>
+            <p>
+                Missions too easy for his hardware. CBM repair kits remain a statistical nightmare.
+            </p>
+            <div
+                style="margin-top: 15px; padding: 8px; background: rgba(255, 0, 80, 0.05); border-left: 2px solid var(--red);">
+                <span style="color: var(--terminal-green); font-weight: bold;">Status:</span>
+                <span style="color: var(--red)">Depressed</span>
+            </div>
+        </div>
+    
+        <div class="panel">
+            <h3>█ ZAPHOD</h3>
+            <p style="color: var(--terminal-dim)">
+                Reckless Speedrunner
+            </p>
+            <p>
+                Tries to ram a nuclear death-mobile into malls for the cool factor. Usually loses limbs.
+            </p>
+            <div
+                style="margin-top: 15px; padding: 8px; background: rgba(255, 0, 255, 0.05); border-left: 2px solid var(--magenta);">
+                <span style="color: var(--terminal-green); font-weight: bold;">Risk:</span>
+                <span style="color: var(--magenta)">High</span>
+            </div>
+        </div>
+    
+        <div class="panel">
+            <h3>█ TRILLIAN</h3>
+            <p style="color: var(--terminal-dim)">
+                Efficiency Min-Maxer
+            </p>
+            <p>
+                Wants encyclopedic data on resistances without digging through raw JSON. Manages chaotic AI teams.
+            </p>
+            <div
+                style="margin-top: 15px; padding: 8px; background: rgba(0, 255, 255, 0.05); border-left: 2px solid var(--cyan);">
+                <span style="color: var(--terminal-green); font-weight: bold;">Focus:</span>
+                <span style="color: var(--cyan)">Optimized</span>
+            </div>
+        </div>
+    </div>
 
-        <script>
-            (function () {
-                var quips = [
-                    "Status: loud, proud, and improbably V60-ied.",
-                    "Data verified by one raccoon with a voltmeter.",
-                    "If you can read this, the bunker doors are open.",
-                    "Fresh bytes, no bites, no Triffids.",
-                    "Built to survive lightning, zombies, and bad poetry.",
-                    "This is not a drill. It is a JSON mirror.",
-                    "Mostly harmless. Entirely useful.",
-                    "Pan Galactic Gargle Blaster not included.",
-                ];
-                var node = document.getElementById("quip");
-                if (!node) return;
-                var index = 0;
-                setInterval(function () {
-                    index = (index + 1) % quips.length;
-                    node.textContent = quips[index];
-                }, 3800);
+      <!-- Footer -->
+      <div class="footer">
+        <p>
+          SYSTEM MAINTAINED FOR THE
+          <a href="https://cbn-guide.pages.dev/" target="_blank" rel="noopener"
+            >HITCHHIKER'S GUIDE TO CATACLYSM: BRIGHT NIGHTS</a
+          >
+        </p>
+        <p style="margin-top: 10px; font-family: &quot;VT323&quot;, monospace">
+          ▓▓▓ POWERED BY CLOUDFLARE PAGES ▓▓▓ GITHUB ACTIONS ▓▓▓ CAFFEINE ▓▓▓
+        </p>
+        <p
+          style="margin-top: 15px; color: var(--terminal-dim); font-size: 11px"
+        >
+          > _TERMINAL SESSION ACTIVE // UPTIME: INFINITE // ERRORS: 0 // TOWELS:
+          SUFFICIENT_
+        </p>
+      </div>
+    </div>
 
-                var egg = document.getElementById("easter-egg");
-                if (!egg) return;
-                var close = egg.querySelector(".egg-close");
-                var badge = document.querySelector(".logo-badge");
-                var secret = "towel";
-                var buffer = "";
-                var clicks = 0;
-                var clickTimer;
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator" id="scroll-indicator">▼▼▼</div>
 
-                function showEgg() {
-                    egg.classList.add("show");
-                    egg.setAttribute("aria-hidden", "false");
-                }
+    <script>
+      // Matrix Rain Effect
+      (function () {
+        const chars =
+          "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
+        const matrix = document.getElementById("matrix");
+        const columns = Math.floor(window.innerWidth / 20);
 
-                function hideEgg() {
-                    egg.classList.remove("show");
-                    egg.setAttribute("aria-hidden", "true");
-                }
+        for (let i = 0; i < columns; i++) {
+          const column = document.createElement("div");
+          column.className = "matrix-column";
+          column.style.left = i * 20 + "px";
+          column.style.animationDuration = Math.random() * 3 + 2 + "s";
+          column.style.animationDelay = Math.random() * 5 + "s";
 
-                if (close) {
-                    close.addEventListener("click", hideEgg);
-                }
+          let text = "";
+          for (let j = 0; j < 30; j++) {
+            text += chars[Math.floor(Math.random() * chars.length)] + "\n";
+          }
+          column.textContent = text;
+          matrix.appendChild(column);
+        }
+      })();
 
-                if (badge) {
-                    badge.addEventListener("click", function () {
-                        clicks += 1;
-                        if (clicks >= 5) {
-                            showEgg();
-                            clicks = 0;
-                        }
-                        clearTimeout(clickTimer);
-                        clickTimer = setTimeout(function () {
-                            clicks = 0;
-                        }, 1200);
-                    });
-                }
+      // Data Stream Animation
+      (function () {
+        const stream = document.getElementById("data-stream");
+        const spans = stream.querySelectorAll("span");
+        spans.forEach((span, i) => {
+          span.style.animationDelay = i * 0.1 + "s";
+        });
+      })();
 
-                document.addEventListener("keydown", function (event) {
-                    if (event.key.length !== 1) return;
-                    buffer = (buffer + event.key.toLowerCase()).slice(
-                        -secret.length,
-                    );
-                    if (buffer === secret) {
-                        showEgg();
-                        buffer = "";
-                    }
-                });
-            })();
-        </script>
-    </body>
+      // Hide Scroll Indicator on Scroll
+      (function () {
+        const indicator = document.getElementById("scroll-indicator");
+        window.addEventListener("scroll", function () {
+          if (window.scrollY > 300) {
+            indicator.style.opacity = "0";
+          } else {
+            indicator.style.opacity = "1";
+          }
+        });
+      })();
+
+      // Terminal Typing Effect for Prompt
+      (function () {
+        const prompts = document.querySelectorAll(".terminal-prompt");
+        prompts.forEach((prompt, index) => {
+          prompt.style.opacity = "0";
+          setTimeout(() => {
+            prompt.style.transition = "opacity 0.3s";
+            prompt.style.opacity = "1";
+          }, index * 500);
+        });
+      })();
+
+      // Scrolling terminal boot sequence - realistic cascading with failure loop
+      (function () {
+        const messages = [
+          {
+            text: "Initializing data vault access",
+            status: "[OK]",
+            color: "var(--terminal-green)",
+          },
+          {
+            text: "Loading system libraries",
+            status: "[OK]",
+            color: "var(--terminal-green)",
+          },
+          {
+            text: "Mounting filesystem",
+            status: "[OK]",
+            color: "var(--terminal-green)",
+          },
+          {
+            text: "Decrypting asset manifest",
+            status: "[FAIL]",
+            color: "var(--red)",
+          },
+          {
+            text: "ERROR: Corruption detected in sector 7",
+            status: "",
+            color: "var(--red)",
+          },
+          {
+            text: "Attempting recovery protocol",
+            status: "[...]",
+            color: "var(--yellow)",
+          },
+          {
+            text: "Switching to backup manifest",
+            status: "[OK]",
+            color: "var(--terminal-green)",
+          },
+          {
+            text: "Verifying data integrity",
+            status: "[OK]",
+            color: "var(--terminal-green)",
+          },
+          {
+            text: "Establishing secure uplink",
+            status: "[OK]",
+            color: "var(--terminal-green)",
+          },
+          {
+            text: "Authenticating credentials",
+            status: "[FAIL]",
+            color: "var(--red)",
+          },
+          {
+            text: "ERROR: Authentication server timeout",
+            status: "",
+            color: "var(--red)",
+          },
+          {
+            text: "Retrying with local cache",
+            status: "[...]",
+            color: "var(--yellow)",
+          },
+          {
+            text: "Local authentication successful",
+            status: "[OK]",
+            color: "var(--terminal-green)",
+          },
+          {
+            text: "System ready",
+            status: "[OK]",
+            color: "var(--terminal-green)",
+          },
+          {
+            text: "Running diagnostics",
+            status: "[OK]",
+            color: "var(--terminal-green)",
+          },
+          {
+            text: "WARNING: Critical system error",
+            status: "",
+            color: "var(--red)",
+          },
+          {
+            text: "System reboot required",
+            status: "[FAIL]",
+            color: "var(--red)",
+          },
+          {
+            text: "Restarting services",
+            status: "[...]",
+            color: "var(--yellow)",
+          },
+        ];
+
+        let currentIndex = 0;
+        const lines = [
+          document.getElementById("boot-line-1"),
+          document.getElementById("boot-line-2"),
+          document.getElementById("boot-line-3"),
+        ];
+
+        function scrollTerminal() {
+          if (!lines[0] || !lines[1] || !lines[2]) return;
+
+          const msg = messages[currentIndex % messages.length];
+
+          // Scroll effect: line 3 becomes line 2, line 2 becomes line 1
+          lines[0].innerHTML = lines[1].innerHTML;
+          lines[1].innerHTML = lines[2].innerHTML;
+
+          // Add new message to line 3
+          lines[2].innerHTML = `<span>${msg.text}</span><span style="color: ${msg.color}">${msg.status}</span>`;
+
+          currentIndex++;
+        }
+
+        setInterval(scrollTerminal, 1500);
+      })();
+
+      // Click to copy code blocks - only copy command, not comments
+      document.querySelectorAll(".panel code").forEach((codeBlock) => {
+        codeBlock.addEventListener("click", function () {
+          // Get the HTML content and replace <br> tags with newlines
+          let html = this.innerHTML.replace(/<br\s*\/?>/gi, "\n");
+
+          // Extract text content
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = html;
+          let text = tempDiv.textContent || tempDiv.innerText || "";
+
+          // Split by lines and process each
+          const lines = text
+            .split("\n")
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0);
+
+          const commands = lines
+            .map((line) => {
+              // If line starts with #, it's a comment line - skip it
+              if (line.startsWith("#")) {
+                return null;
+              }
+
+              // If line contains # anywhere, extract only the command before it
+              const commentIndex = line.indexOf("#");
+              if (commentIndex > 0) {
+                return line.substring(0, commentIndex).trim();
+              }
+
+              // No comment, return the whole line
+              return line.trim();
+            })
+            .filter((cmd) => cmd !== null && cmd.length > 0);
+
+          const finalText = commands.join("\n");
+
+          navigator.clipboard.writeText(finalText).then(() => {
+            this.classList.add("copied");
+            setTimeout(() => {
+              this.classList.remove("copied");
+            }, 2000);
+          });
+        });
+      });
+
+      // Add extra glow effect on button clicks
+      document.querySelectorAll(".btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          this.style.boxShadow =
+            "0 0 40px var(--terminal-green-glow), 0 0 80px var(--terminal-green-glow)";
+          setTimeout(() => {
+            this.style.boxShadow = "";
+          }, 300);
+        });
+      });
+    </script>
+  </body>
 </html>
