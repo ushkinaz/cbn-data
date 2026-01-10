@@ -76,7 +76,7 @@ export default async function run({ dryRun = false } = {}) {
 
   // Write updated builds.json
   console.log(`Writing ${keptBuilds.length} builds to builds.json...`);
-  writeFileSync(buildsJsonPath, JSON.stringify(keptBuilds, null, 2));
+  writeFileSync(buildsJsonPath, JSON.stringify(keptBuilds));
 
   console.log("✅ Pruning complete");
 }

@@ -326,7 +326,7 @@ export default async function run({ github, context, dryRun = false }) {
 
     console.log(`Writing ${builds.length} builds to builds.json...`);
     if (!dryRun) {
-        writeFile(workspaceDir, "builds.json", JSON.stringify(builds, null, 2));
+        writeFile(workspaceDir, "builds.json", JSON.stringify(builds));
     }
 
     const latestBuild = newBuilds.find((b) => b.build_number === latestRelease);
