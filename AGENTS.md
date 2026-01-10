@@ -39,9 +39,9 @@ node prune-data-launcher.js
 GITHUB_TOKEN=xxx node prune-data-launcher.js
 ```
 ```bash
-# Migrate GFX (see script header for full docs)
-GITHUB_TOKEN=xxx node migrate-gfx.mjs --dry-run
-GITHUB_TOKEN=xxx node migrate-gfx.mjs
+# Backfill data (see script header for full docs)
+GITHUB_TOKEN=xxx node backfill-data.mjs --dry-run
+GITHUB_TOKEN=xxx node backfill-data.mjs
 ```
 
 ## Key Scripts
@@ -75,14 +75,14 @@ Applies retention policy, removes old builds.
 
 Runs monthly. Creates backup branch before squashing history.
 
-### `migrate-gfx.mjs`
+### `backfill-data.mjs`
 Backfills missing GFX + precompresses JSON for old builds.
 
 **Independent processes:**
 - Downloads/converts GFX only if missing WebP
 - Compresses JSON only if missing .gz/.br
 
-See script header (`node migrate-gfx.mjs`) for full documentation.
+See script header (`node backfill-data.mjs`) for full documentation.
 
 ### `pinyin.mjs`
 Generates pinyin mappings for Chinese translations using the `pinyin` package.

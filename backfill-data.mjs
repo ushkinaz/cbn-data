@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * GFX Migration & JSON Precompression
+ * Data Backfill Script
  * 
  * Backfills GFX files for old builds, converts PNGs to WebP, and precompresses JSON files.
  * 
@@ -11,14 +11,14 @@
  *   - export GITHUB_TOKEN=your_token_here
  * 
  * Usage:
- *   node migrate-gfx.mjs --dry-run              # Test run (recommended first)
- *   node migrate-gfx.mjs                        # Live migration
- *   node migrate-gfx.mjs --force                # Force re-process
- *   node migrate-gfx.mjs --build=2024-01-10     # Specific build
- *   node migrate-gfx.mjs --branch=dev           # Custom branch
+ *   node backfill-data.mjs --dry-run              # Test run (recommended first)
+ *   node backfill-data.mjs                        # Live migration
+ *   node backfill-data.mjs --force                # Force re-process
+ *   node backfill-data.mjs --build=2024-01-10     # Specific build
+ *   node backfill-data.mjs --branch=dev           # Custom branch
  * 
  * What it does:
- *   1. Checks out target branch to data_workspace/
+ *   1. Creates/updates git worktree for target branch in data_workspace/
  *   2. Finds builds missing GFX or compressed JSON
  *   3. Downloads release zipballs (if GFX needed)
  *   4. Extracts GFX, converts PNG→WebP (if GFX needed)
@@ -274,7 +274,7 @@ async function migrate() {
     const { dryRun, branch, force, specificBuild } = parseArgs();
 
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("🔄 GFX Migration Script");
+    console.log("🔄 Data Backfill Script");
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log(`Branch: ${branch}`);
     console.log(`Workspace: ${DEFAULT_WORKSPACE}`);
@@ -299,25 +299,23 @@ async function migrate() {
 
     const github = new Octokit({ auth: token });
 
-    // Check if workspace exists
-    if (!fs.existsSync(DEFAULT_WORKSPACE)) {
-        console.log("📂 Creating workspace directory...\n");
-        fs.mkdirSync(DEFAULT_WORKSPACE, { recursive: true });
-    }
+    // Initialize or update the workspace using git worktree
+    const worktreeExists = fs.existsSync(DEFAULT_WORKSPACE);
+    const isWorktree = worktreeExists && fs.existsSync(path.join(DEFAULT_WORKSPACE, ".git"));
 
-    // Initialize or update the workspace
-    const isGitRepo = fs.existsSync(path.join(DEFAULT_WORKSPACE, ".git"));
-
-    if (!isGitRepo) {
-        console.log("📥 Checking out data branch...");
-        exec(`git clone --branch ${branch} --depth 1 --single-branch . ${DEFAULT_WORKSPACE}`);
-        console.log("✅ Branch checked out\n");
+    if (!worktreeExists) {
+        console.log("📥 Creating git worktree for data branch...");
+        exec(`git worktree add ${DEFAULT_WORKSPACE} ${branch}`);
+        console.log("✅ Worktree created\n");
+    } else if (!isWorktree) {
+        console.error(`❌ Error: ${DEFAULT_WORKSPACE} exists but is not a git worktree`);
+        console.error(`   Please remove it or use a different workspace directory`);
+        process.exit(1);
     } else {
-        console.log("📥 Updating existing workspace...");
+        console.log("📥 Updating existing worktree...");
         exec(`git -C ${DEFAULT_WORKSPACE} fetch origin ${branch}`);
-        exec(`git -C ${DEFAULT_WORKSPACE} checkout ${branch}`);
-        exec(`git -C ${DEFAULT_WORKSPACE} pull origin ${branch}`);
-        console.log("✅ Workspace updated\n");
+        exec(`git -C ${DEFAULT_WORKSPACE} reset --hard origin/${branch}`);
+        console.log("✅ Worktree updated\n");
     }
 
     // Check if webp tools are installed
