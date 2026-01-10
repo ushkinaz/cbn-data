@@ -23,7 +23,8 @@
  *   3. Downloads release zipballs (if GFX needed)
  *   4. Extracts GFX, converts PNG→WebP (if GFX needed)
  *   5. Deletes original PNGs
- *   6. Precompresses all JSON (creates .gz and .br) (if compression needed)
+ *   6. Precompresses JSON with Brotli, renames to .json (if compression needed)
+ *   Note: Final .json files are Brotli-compressed (Cloudflare-compatible)
  * 
  * After migration:
  *   cd data_workspace
@@ -137,11 +138,26 @@ function hasCompressedJson(workspaceDir, buildTag) {
         return false;
     }
 
-    // Check if any .gz or .br files exist
-    const gzFiles = exec(`find "${buildDir}" -type f -name "*.json.gz" | head -1`, { silent: true, ignoreError: true });
-    const brFiles = exec(`find "${buildDir}" -type f -name "*.json.br" | head -1`, { silent: true, ignoreError: true });
+    // Check if JSON files are Brotli-compressed by looking at the first JSON file
+    // Brotli files start with specific magic bytes (often starts with certain patterns)
+    // A simpler check: if the file is not valid JSON text, it's compressed
+    const allJsonPath = path.join(buildDir, "all.json");
+    if (!fs.existsSync(allJsonPath)) {
+        return false;
+    }
 
-    return (gzFiles && gzFiles.trim().length > 0) || (brFiles && brFiles.trim().length > 0);
+    try {
+        // Read first few bytes to check if it's Brotli compressed
+        const buffer = fs.readFileSync(allJsonPath);
+        // Brotli streams typically don't start with '{' or '[' (JSON starts)
+        // If the file starts with '{' and is valid UTF-8, it's uncompressed
+        const firstByte = buffer[0];
+        // JSON files start with '{' (0x7B) or '[' (0x5B) or whitespace
+        // Compressed files typically have binary data
+        return firstByte !== 0x7B && firstByte !== 0x5B && firstByte !== 0x20 && firstByte !== 0x0A;
+    } catch (error) {
+        return false;
+    }
 }
 
 
@@ -400,15 +416,21 @@ async function migrate() {
     // Precompress JSON files (independent of GFX processing)
     if (!dryRun) {
         console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        console.log("🗜️  Precompressing JSON files");
+        console.log("🗜️  Precompressing JSON files (Brotli → JSON)");
         console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
         let jsonCount = 0;
-        let gzipCount = 0;
-        let brotliCount = 0;
+        let compressedCount = 0;
 
         // Check if brotli is available
         const hasBrotli = exec("which brotli", { silent: true, ignoreError: true });
+
+        if (!hasBrotli) {
+            console.error("❌ Error: brotli not found. Please install Brotli:");
+            console.error("   macOS: brew install brotli");
+            console.error("   Linux: sudo apt-get install brotli");
+            process.exit(1);
+        }
 
         for (const build of buildsToPprocess) {
             const needsCompression = force || !hasCompressedJson(DEFAULT_WORKSPACE, build.build_number);
@@ -432,22 +454,19 @@ async function migrate() {
             for (const jsonFile of jsonFiles) {
                 jsonCount++;
 
-                // Gzip compression
+                // Brotli compression (quality 11 = maximum)
+                // This creates a .json.br file
                 try {
-                    exec(`gzip -9 -k -f "${jsonFile}"`, { silent: true });
-                    gzipCount++;
-                } catch (e) {
-                    // Ignore errors
-                }
+                    exec(`brotli -q 11 -k -f "${jsonFile}"`, { silent: true });
 
-                // Brotli compression (if available)
-                if (hasBrotli) {
-                    try {
-                        exec(`brotli -q 11 -k -f "${jsonFile}"`, { silent: true });
-                        brotliCount++;
-                    } catch (e) {
-                        // Ignore errors
+                    // Rename the compressed .br file to replace the original .json
+                    const brFile = `${jsonFile}.br`;
+                    if (fs.existsSync(brFile)) {
+                        fs.renameSync(brFile, jsonFile);
+                        compressedCount++;
                     }
+                } catch (e) {
+                // Ignore errors
                 }
 
                 if (jsonCount % 10 === 0) {
@@ -463,13 +482,9 @@ async function migrate() {
 
         console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         console.log("📊 Compression Summary:");
-        console.log(`   JSON files: ${jsonCount}`);
-        console.log(`   Gzipped (.gz): ${gzipCount}`);
-        if (hasBrotli) {
-            console.log(`   Brotli (.br): ${brotliCount}`);
-        } else {
-            console.log(`   Brotli: skipped (not installed)`);
-        }
+        console.log(`   JSON files found: ${jsonCount}`);
+        console.log(`   Brotli compressed: ${compressedCount}`);
+        console.log(`   ℹ️  Files are now Brotli-compressed .json`);
         console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     }
 

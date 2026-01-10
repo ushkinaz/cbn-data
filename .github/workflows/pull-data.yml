@@ -129,31 +129,30 @@ jobs:
           fi
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-      - name: Precompress JSON files
+      - name: Precompress JSON files (Cloudflare-compatible)
         working-directory: data_workspace
         run: |
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🗜️  Precompressing JSON files"
+          echo "🗜️  Precompressing JSON files (Brotli → JSON)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           
           json_count=0
-          gzip_count=0
-          brotli_count=0
+          compressed_count=0
           
           # Find all JSON files (excluding .git directory)
           while IFS= read -r -d '' json_file; do
             ((json_count++))
             
-            # Gzip compression (level 9 = maximum)
-            if gzip -9 -k -f "$json_file" 2>/dev/null; then
-              ((gzip_count++))
-            fi
-            
             # Brotli compression (quality 11 = maximum)
+            # This creates a .json.br file
             if brotli -q 11 -k -f "$json_file" 2>/dev/null; then
-              ((brotli_count++))
+              # Rename the compressed .br file to replace the original .json
+              if [ -f "${json_file}.br" ]; then
+                mv -f "${json_file}.br" "$json_file"
+                ((compressed_count++))
+              fi
             fi
             
             # Progress indicator every 10 files
@@ -170,9 +169,9 @@ jobs:
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📊 Compression Summary:"
-          echo "  📄 JSON files: ${json_count}"
-          echo "  🗜️  Gzipped (.gz): ${gzip_count}"
-          echo "  🗜️  Brotli (.br): ${brotli_count}"
+          echo "  📄 JSON files found: ${json_count}"
+          echo "  🗜️  Brotli compressed: ${compressed_count}"
+          echo "  ℹ️  Files are now Brotli-compressed .json"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Commit and push all changes

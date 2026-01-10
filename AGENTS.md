@@ -54,12 +54,12 @@ Ingests upstream releases → writes data snapshots.
 - Extracts JSON (`all.json`), mods (`all_mods.json`), translations (`lang/*.json`)
 - For Chinese: generates pinyin variants
 - Extracts GFX assets
-- Writes to filesystem (workflow handles WebP conversion + JSON precompression)
+- Writes to filesystem (workflow handles WebP conversion + Brotli compression)
 
 **Doesn't:**
 - Commit (workflow does this)
 - Convert GFX (workflow does PNG→WebP)
-- Precompress JSON (workflow creates .gz/.br)
+- Compress JSON (workflow does Brotli compression)
 
 ### `prune-data.mjs`
 Applies retention policy, removes old builds.
@@ -76,11 +76,11 @@ Applies retention policy, removes old builds.
 Runs monthly. Creates backup branch before squashing history.
 
 ### `backfill-data.mjs`
-Backfills missing GFX + precompresses JSON for old builds.
+Backfills missing GFX + Brotli-compresses JSON for old builds.
 
 **Independent processes:**
 - Downloads/converts GFX only if missing WebP
-- Compresses JSON only if missing .gz/.br
+- Brotli-compresses JSON only if not already compressed
 
 See script header (`node backfill-data.mjs`) for full documentation.
 
@@ -96,7 +96,7 @@ Generates pinyin mappings for Chinese translations using the `pinyin` package.
 2. Run `pull-data.mjs`
 3. Install compression tools (webp, brotli)
 4. Convert PNG→WebP
-5. Precompress JSON (.gz + .br)
+5. Brotli-compress JSON (replaces .json files with compressed versions)
 6. Commit + push to data branch
 
 ### `.github/workflows/prune-data.yml`
@@ -120,28 +120,31 @@ Generates pinyin mappings for Chinese translations using the `pinyin` package.
 
 ```
 data_workspace/
-├── builds.json              # Build metadata
+├── builds.json              # Build metadata (Brotli-compressed)
 └── data/
     └── 2024-01-10/
-        ├── all.json         # Game objects
-        ├── all.json.gz      # Gzipped
-        ├── all.json.br      # Brotli
-        ├── all_mods.json    # Mod data
-        ├── lang/            # Translations
+        ├── all.json         # Game objects (Brotli-compressed)
+        ├── all_mods.json    # Mod data (Brotli-compressed)
+        ├── lang/            # Translations (Brotli-compressed)
         │   ├── fr.json
         │   ├── zh_CN.json
         │   └── zh_CN_pinyin.json
         └── gfx/             # WebP graphics
 ```
 
+**Note:** All `.json` files are actually Brotli-compressed. The `_headers` file 
+instructs Cloudflare to serve them with `Content-Encoding: br`.
+
 ## Deployment
 
-Cloudflare Pages deploys directly from `main` branch. Auto-serves:
-- `.br` for brotli-capable clients (~90% smaller)
-- `.gz` for gzip-capable clients (~85% smaller)
-- Original JSON for legacy clients
+Cloudflare Pages deploys directly from `main` branch.
 
-`_headers` file (in data branch) configures caching and content types.
+**Compression Strategy:**
+Cloudflare Pages cannot automatically serve `.br` files with proper encoding headers.
+Workaround: All JSON files are Brotli-compressed but saved as `.json` (without extension).
+The `_headers` file declares `Content-Encoding: br` for all `.json` files.
+
+This achieves ~90% smaller file sizes while maintaining compatibility.
 
 ## Contributing
 
