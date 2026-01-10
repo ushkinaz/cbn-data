@@ -5,21 +5,26 @@
   Timing-Allow-Origin: *
   Referrer-Policy: strict-origin-when-cross-origin
 
-/data/2*
-  Cache-Control: public, max-age=31536000, immutable
-
-/data/v*/*
-  Cache-Control: public, max-age=31536000, immutable
-
-/builds.json
-  Cache-Control: public, max-age=60, stale-while-revalidate=43200
-  X-Robots-Tag: noindex
-
-/data/2025-08-20/all.json
+/data/*.json
   Content-Encoding: br
   Content-Type: application/json
-  Cache-Control: public, max-age=3600, stale-while-revalidate=86400, no-transform
-  cbn-data: served
+  Cache-Control: public, max-age=31536000, immutable, no-transform
 
-/data/*.json
+/data/*/*.json
+  Content-Encoding: br
+  Content-Type: application/json
+  Cache-Control: public, max-age=31536000, immutable, no-transform
+
+/builds.json
+  Content-Encoding: br
+  Content-Type: application/json
+  Cache-Control: public, max-age=60, stale-while-revalidate=43200, no-transform
   X-Robots-Tag: noindex
+
+/data/*/gfx/*.webp
+  Content-Type: image/webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/data/*/gfx/*/*.webp
+  Content-Type: image/webp
+  Cache-Control: public, max-age=31536000, immutable
