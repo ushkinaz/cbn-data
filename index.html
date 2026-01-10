@@ -813,14 +813,13 @@
         background: rgba(255, 0, 80, 0.1);
         border: 2px solid var(--red);
         padding: 20px;
-        margin: 20px 0;
         box-shadow:
           0 0 20px var(--red-glow),
           inset 0 0 20px rgba(255, 0, 80, 0.05);
       }
 
       .alert::before {
-        content: "⚠ WARNING ⚠";
+        content: "⚠ ";
         display: block;
         font-family: "VT323", monospace;
         font-size: 24px;
@@ -1111,7 +1110,7 @@
             Localized strings for international survivors. Multi-language
             wasteland support.
           </p>
-          <code>/data/{RELEASE}/lang/zh_CN.json</code>
+          <code>/data/{RELEASE}/lang/ko.json</code>
         </div>
 
         <div class="panel">
@@ -1127,7 +1126,7 @@
           <h3>█ COMPRESSION</h3>
           <p>
             All JSON files are Brotli-compressed by default. Saves ~90%
-            bandwidth. Cloudflare handles decompression.
+            bandwidth. Cloudflare handles delivery.
           </p>
           <code>Content-Encoding: br</code>
         </div>
@@ -1139,7 +1138,7 @@
           <strong>SURVIVOR PROTOCOL:</strong> Always start with
           <code style="color: var(--cyan)">/builds.json</code> to get available
           dates, then navigate to
-          <code style="color: var(--cyan)">/data/DATE/</code> for your target
+          <code style="color: var(--cyan)">/data/RELEASE/</code> for your target
           build. Check the guide at
           <a
             href="https://cbn-guide.pages.dev/"
@@ -1158,10 +1157,10 @@
         <p style="color: var(--terminal-green-dim)">
           Because typing by hand builds character, but these commands save time:
         </p>
-        <code># Fetch build index<br />curl -s https://cbn-data.pages.dev/builds.json | jq '.[0]'</code>
+        <code># Fetch build index<br />curl -s https://cbn-data.pages.dev/builds.json | jq '.[]'</code>
         <code># Download complete game data<br />curl -s https://cbn-data.pages.dev/data/{RELEASE}/all.json -o all.json</code>
-        <code># Get Chinese translations with pinyin<br />curl -s https://cbn-data.pages.dev/data/{RELEASE}/lang/zh_CN_pinyin.json -o zh_CN.json</code>
-        <code># List available builds<br />curl -s https://cbn-data.pages.dev/builds.json | jq '.[].date'</code>
+        <code># Get Chinese translations with pinyin<br />curl -s https://cbn-data.pages.dev/data/{RELEASE}/lang/zh_CN_pinyin.json -o zh_CN_pinyin.json</code>
+        <code># List available builds<br />curl -s https://cbn-data.pages.dev/builds.json | jq '.[].build_number'</code>
       </div>
 
       <!-- FAQ -->
@@ -1387,8 +1386,8 @@
             color: "var(--red)",
           },
           {
-            text: "ERROR: Corruption detected in sector 7",
-            status: "",
+            text: "Corruption detected in sector 0xBA70",
+            status: "[ERROR]",
             color: "var(--red)",
           },
           {
@@ -1417,8 +1416,8 @@
             color: "var(--red)",
           },
           {
-            text: "ERROR: Authentication server timeout",
-            status: "",
+            text: "Authentication server timeout",
+            status: "[ERROR]",
             color: "var(--red)",
           },
           {
@@ -1442,8 +1441,8 @@
             color: "var(--terminal-green)",
           },
           {
-            text: "WARNING: Critical system error",
-            status: "",
+            text: "Critical system error",
+            status: "[WARNING]",
             color: "var(--red)",
           },
           {
