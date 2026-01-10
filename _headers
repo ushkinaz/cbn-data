@@ -12,20 +12,11 @@
   Timing-Allow-Origin: *
   X-Content-Type-Options: nosniff
 
-/data/*/*.json
-  Access-Control-Allow-Origin: *
+/data/*.json
   Cache-Control: public, max-age=31536000, immutable, no-transform
   Content-Encoding: br
   Content-Type: application/json
-  Referrer-Policy: strict-origin-when-cross-origin
-  Timing-Allow-Origin: *
-  X-Content-Type-Options: nosniff
 
 
-/data/*/gfx/*/*.webp
-  Access-Control-Allow-Origin: *
+/data/*.webp
   Cache-Control: public, max-age=31536000, immutable
-  Content-Type: image/webp
-  Referrer-Policy: strict-origin-when-cross-origin
-  Timing-Allow-Origin: *
-  X-Content-Type-Options: nosniff
