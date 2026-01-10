@@ -1,36 +1,36 @@
 # C:BN DATA VAULT — WASTELAND DATA TERMINAL v2.42
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 
   SYSTEM ONLINE // ACCESS PENDING // UPLINK ESTABLISHED
 
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ ROOT@BUNKER:~/DATA/CBN                                                       [●][●][●] ┃
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-┃                                                                                        ┃
-┃  > Initializing data vault access                                                 [OK] ┃
-┃  > Decrypting asset manifest                                                    [FAIL] ┃
-┃  > Retrying with backup protocol                                                  [OK] ┃
-┃                                                                                        ┃
-┃        ██╗    ██╗ █████╗ ███████╗████████╗███████╗██╗       █████╗ ███╗   ██╗██████╗   ┃
-┃        ██║    ██║██╔══██╗██╔════╝╚══██╔══╝██╔════╝██║      ██╔══██╗████╗  ██║██╔══██╗  ┃
-┃        ██║ █╗ ██║███████║███████╗   ██║   █████╗  ██║      ███████║██╔██╗ ██║██║  ██║  ┃
-┃        ██║███╗██║██╔══██║╚════██║   ██║   ██╔══╝  ██║      ██╔══██║██║╚██╗██║██║  ██║  ┃
-┃        ╚███╔███╔╝██║  ██║███████║   ██║   ███████╗███████╗ ██║  ██║██║ ╚████║██████╔╝  ┃
-┃         ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚══════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝   ┃
-┃                                                                                        ┃
-┃                             D A T A   T E R M I N A L                                  ┃
-┃                                                                                        ┃
-┃  CLASSIFIED ACCESS: Complete Cataclysm: Bright Nights data mirror. JSON game objects,  ┃
-┃  translation files, GFX assets, and build metadata. Optimized for bandwidth-starved    ┃
-┃  survivors with Brotli compression and WebP graphics. No towels required, recommended. ┃
-┃                                                                                        ┃
-┃  [STATUS] ● ONLINE  ● SECURE  ● HOT                                                    ┃
-┃                                                                                        ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ROOT@BUNKER:~/DATA/CBN                                                                    [●][●][●]   ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃                                                                                                       ┃
+┃ > Initializing data vault access                                                             [OK]     ┃
+┃ > Decrypting asset manifest                                                                [FAIL]     ┃
+┃ > Retrying with backup protocol                                                              [OK]     ┃
+┃                                                                                                       ┃
+┃             ██╗    ██╗ █████╗ ███████╗████████╗███████╗██╗       █████╗ ███╗   ██╗██████╗             ┃
+┃             ██║    ██║██╔══██╗██╔════╝╚══██╔══╝██╔════╝██║      ██╔══██╗████╗  ██║██╔══██╗            ┃
+┃             ██║ █╗ ██║███████║███████╗   ██║   █████╗  ██║      ███████║██╔██╗ ██║██║  ██║            ┃
+┃             ██║███╗██║██╔══██║╚════██║   ██║   ██╔══╝  ██║      ██╔══██║██║╚██╗██║██║  ██║            ┃
+┃             ╚███╔███╔╝██║  ██║███████║   ██║   ███████╗███████╗ ██║  ██║██║ ╚████║██████╔╝            ┃
+┃              ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚══════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝             ┃
+┃                                                                                                       ┃
+┃                                  D A T A   T E R M I N A L                                            ┃
+┃                                                                                                       ┃
+┃ CLASSIFIED ACCESS: Complete Cataclysm: Bright Nights data mirror. JSON game objects,                  ┃
+┃ translation files, GFX assets, and build metadata. Optimized for bandwidth-starved                    ┃
+┃ survivors with Brotli compression and WebP graphics. No towels required, recommended.                 ┃
+┃                                                                                                       ┃
+┃ [STATUS] ● ONLINE  ● SECURE  ● HOT                                                                    ┃
+┃                                                                                                       ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 ```
 
 ---
@@ -60,16 +60,16 @@
 ## // SURVIVOR PROTOCOL //
 
 ```
-╔════════════════════════════════════════════════════════════════════════════════════════╗
-║                                                                                        ║
-║  ⚠ WARNING ⚠                                                                           ║
-║                                                                                        ║
-║  Always start with /builds.json to get available dates, then navigate to /data/DATE/   ║
-║  for your target build.                                                                ║
-║                                                                                        ║
-║  Check the guide at https://cbn-guide.pages.dev/ for integration examples.             ║
-║                                                                                        ║
-╚════════════════════════════════════════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                                       ║
+║                                              ⚠ WARNING ⚠                                              ║
+║                                                                                                       ║
+║          Always start with /builds.json to get available dates, then navigate to /data/DATE/          ║
+║                                        for your target build.                                         ║
+║                                                                                                       ║
+║               Check the guide at https://cbn-guide.pages.dev/ for integration examples.               ║
+║                                                                                                       ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ## // DATA ENDPOINTS //
@@ -147,41 +147,42 @@ curl -s https://cbn-data.pages.dev/builds.json | jq '.[].build_number'
 ## // FREQUENTLY ASKED //
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ ▼ IS THIS SAFE?                                                                        │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│ Data pulled directly from official Cataclysm: Bright Nights releases. No zombies,      │
-│ just bytes. Cloudflare Pages hosting ensures high availability.                        │
-│                                                                                        │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ▼ IS THIS SAFE?                                                                                      │
+├───────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                       │
+│  Data pulled directly from official Cataclysm: Bright Nights releases. No zombies,                    │
+│  just bytes. Cloudflare Pages hosting ensures high availability.                                      │
+│                                                                                                       │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ ▼ WHY SO MANY FILES?                                                                   │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│ Historical builds preserved for modding, debugging, and temporal archaeology.          │
-│ Retention policy prunes ancient snapshots automatically.                               │
-│                                                                                        │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ▼ WHY SO MANY FILES?                                                                                 │
+├───────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                       │
+│  Historical builds preserved for modding, debugging, and temporal archaeology.                        │
+│  Retention policy prunes ancient snapshots automatically.                                             │
+│                                                                                                       │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ ▼ CAN I CACHE THIS?                                                                    │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│ Yes. Cache aggressively. Headers already set for optimal CDN behavior. Treat it        │
-│ like canned goods—store and forget.                                                    │
-│                                                                                        │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ▼ CAN I CACHE THIS?                                                                                  │
+├───────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                       │
+│  Yes. Cache aggressively. Headers already set for optimal CDN behavior. Treat it                      │
+│  like canned goods—store and forget.                                                                  │
+│                                                                                                       │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ ▼ COMPRESSION DETAILS?                                                                 │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│ All JSON files served Brotli-compressed via Cloudflare headers. ~90% size reduction.   │
-│ No client-side decompression needed.                                                   │
-│                                                                                        │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│  ▼ COMPRESSION DETAILS?                                                                               │
+├───────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                       │
+│  All JSON files served Brotli-compressed via Cloudflare headers. ~90% size reduction.                 │
+│  No client-side decompression needed.                                                                 │
+│                                                                                                       │
+└───────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 ---
@@ -189,54 +190,54 @@ curl -s https://cbn-data.pages.dev/builds.json | jq '.[].build_number'
 ## // CURRENT SPONSORS //
 
 ```
-╔══════════════════════════════════════════╗  ╔══════════════════════════════════════════╗
-║ █ ARTHUR DENT                            ║  ║ █ FORD PREFECT                           ║
-║ Reluctant Survivor                       ║  ║ Bored Expert                             ║
-╠══════════════════════════════════════════╣  ╠══════════════════════════════════════════╣
-║                                          ║  ║                                          ║
-║ Lost in nested containers. Keeps         ║  ║ Suffers from static spawn fatigue.       ║
-║ losing aspirin inside three layers       ║  ║ Craves exotic NPCs and a sub-ether       ║
-║ of plastic bags.                         ║  ║ network.                                 ║
-║                                          ║  ║                                          ║
-║ Morale: Leaping                          ║  ║ Mood: Debuffed                           ║
-╚══════════════════════════════════════════╝  ╚══════════════════════════════════════════╝
+╔═════════════════════════════════════════════════╗   ╔═════════════════════════════════════════════════╗
+║  █ ARTHUR DENT                                  ║   ║  █ FORD PREFECT                                 ║
+║  Reluctant Survivor                             ║   ║  Bored Expert                                   ║
+╠═════════════════════════════════════════════════╣   ╠═════════════════════════════════════════════════╣
+║                                                 ║   ║                                                 ║
+║  Lost in nested containers. Keeps               ║   ║  Suffers from static spawn fatigue.             ║
+║  losing aspirin inside three layers             ║   ║  Craves exotic NPCs and a sub-ether             ║
+║  of plastic bags.                               ║   ║  network.                                       ║
+║                                                 ║   ║                                                 ║
+║  Morale: Leaping                                ║   ║  Mood: Debuffed                                 ║
+╚═════════════════════════════════════════════════╝   ╚═════════════════════════════════════════════════╝
 
-╔══════════════════════════════════════════╗  ╔══════════════════════════════════════════╗
-║ █ MARVIN                                 ║  ║ █ ZAPHOD                                 ║
-║ Overqualified Android                    ║  ║ Reckless Speedrunner                     ║
-╠══════════════════════════════════════════╣  ╠══════════════════════════════════════════╣
-║                                          ║  ║                                          ║
-║ Missions too easy for his hardware.      ║  ║ Tries to ram a nuclear death-mobile      ║
-║ CBM repair kits remain a statistical     ║  ║ into malls for the cool factor.          ║
-║ nightmare.                               ║  ║ Usually loses limbs.                     ║
-║                                          ║  ║                                          ║
-║ Status: Depressed                        ║  ║ Risk: High                               ║
-╚══════════════════════════════════════════╝  ╚══════════════════════════════════════════╝
+╔═════════════════════════════════════════════════╗   ╔═════════════════════════════════════════════════╗
+║  █ MARVIN                                       ║   ║  █ ZAPHOD                                       ║
+║  Overqualified Android                          ║   ║  Reckless Speedrunner                           ║
+╠═════════════════════════════════════════════════╣   ╠═════════════════════════════════════════════════╣
+║                                                 ║   ║                                                 ║
+║  Missions too easy for his hardware.            ║   ║  Tries to ram a nuclear death-mobile            ║
+║  CBM repair kits remain a statistical           ║   ║  into malls for the cool factor.                ║
+║  nightmare.                                     ║   ║  Usually loses limbs.                           ║
+║                                                 ║   ║                                                 ║
+║  Status: Depressed                              ║   ║  Risk: High                                     ║
+╚═════════════════════════════════════════════════╝   ╚═════════════════════════════════════════════════╝
 
-╔════════════════════════════════════════════════════════════════════════════════════════╗
-║ █ TRILLIAN                                                                             ║
-║ Efficiency Min-Maxer                                                                   ║
-╠════════════════════════════════════════════════════════════════════════════════════════╣
-║                                                                                        ║
-║ Wants encyclopedic data on resistances without digging through raw JSON. Manages       ║
-║ chaotic AI teams.                                                                      ║
-║                                                                                        ║
-║ Focus: Optimized                                                                       ║
-╚════════════════════════════════════════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  █ TRILLIAN                                                                                           ║
+║  Efficiency Min-Maxer                                                                                 ║
+╠═══════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                                       ║
+║  Wants encyclopedic data on resistances without digging through raw JSON. Manages                     ║
+║  chaotic AI teams.                                                                                    ║
+║                                                                                                       ║
+║  Focus: Optimized                                                                                     ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 
-                           SYSTEM MAINTAINED FOR THE
-                HITCHHIKER'S GUIDE TO CATACLYSM: BRIGHT NIGHTS
-                       https://cbn-guide.pages.dev/
+                                        SYSTEM MAINTAINED FOR THE
+                             HITCHHIKER'S GUIDE TO CATACLYSM: BRIGHT NIGHTS
+                                      https://cbn-guide.pages.dev/
 
-         ▓▓▓ POWERED BY CLOUDFLARE PAGES ▓▓▓ GITHUB ACTIONS ▓▓▓ CAFFEINE ▓▓▓
+                   ▓▓▓ POWERED BY CLOUDFLARE PAGES ▓▓▓ GITHUB ACTIONS ▓▓▓ CAFFEINE ▓▓▓
 
-  > _TERMINAL SESSION ACTIVE // UPTIME: INFINITE // ERRORS: 0 // TOWELS: SUFFICIENT_
+           > _TERMINAL SESSION ACTIVE // UPTIME: INFINITE // ERRORS: 0 // TOWELS: SUFFICIENT_
 
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 ```
