@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>CBN Data Bunker</title>
+        <meta
+            name="description"
+            content="Cataclysm: Bright Nights data mirror with JSON, translations, and GFX."
+        />
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&display=swap");
+
+            :root {
+                --bg-1: #0b0f0d;
+                --bg-2: #151a16;
+                --ink: #e6f2e2;
+                --muted: #a9b9ad;
+                --acid: #a8ff3e;
+                --ember: #ff9b54;
+                --rust: #d24d1f;
+                --tape: #1f2a23;
+                --panel: #121714;
+                --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            html,
+            body {
+                height: 100%;
+            }
+
+            body {
+                margin: 0;
+                color: var(--ink);
+                background:
+                    radial-gradient(
+                        1200px 600px at 10% -10%,
+                        rgba(168, 255, 62, 0.16),
+                        transparent 60%
+                    ),
+                    radial-gradient(
+                        900px 500px at 90% 10%,
+                        rgba(255, 155, 84, 0.16),
+                        transparent 60%
+                    ),
+                    repeating-linear-gradient(
+                        135deg,
+                        rgba(255, 255, 255, 0.03) 0 2px,
+                        transparent 2px 8px
+                    ),
+                    linear-gradient(180deg, var(--bg-1), var(--bg-2));
+                font-family: "Space Mono", monospace;
+                letter-spacing: 0.2px;
+            }
+
+            .page {
+                max-width: 1120px;
+                margin: 0 auto;
+                padding: 28px 20px 60px;
+            }
+
+            header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 8px 0 24px;
+            }
+
+            .logo {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+            }
+
+            .logo-badge {
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+                background: conic-gradient(
+                    from 90deg,
+                    var(--acid),
+                    var(--ember),
+                    var(--rust),
+                    var(--acid)
+                );
+                box-shadow: var(--shadow);
+                position: relative;
+            }
+
+            .logo-badge::after {
+                content: "";
+                position: absolute;
+                inset: 8px;
+                border-radius: 8px;
+                background: var(--bg-1);
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+            }
+
+            .logo-title {
+                font-family: "Bungee", sans-serif;
+                font-size: 1.2rem;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            nav a {
+                color: var(--muted);
+                text-decoration: none;
+                margin-left: 16px;
+                font-size: 0.95rem;
+                border-bottom: 2px solid transparent;
+                transition:
+                    border-color 200ms ease,
+                    color 200ms ease;
+            }
+
+            nav a:hover,
+            nav a:focus-visible {
+                color: var(--ink);
+                border-color: var(--acid);
+            }
+
+            .hero {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 28px;
+                align-items: stretch;
+            }
+
+            .hero-card {
+                background: var(--panel);
+                border-radius: 18px;
+                padding: 28px;
+                box-shadow: var(--shadow);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .hero-card::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(
+                    120deg,
+                    rgba(168, 255, 62, 0.08),
+                    transparent 60%
+                );
+                opacity: 0.9;
+                pointer-events: none;
+            }
+
+            h1 {
+                font-family: "Bungee", sans-serif;
+                font-size: clamp(2.2rem, 4vw, 3.4rem);
+                margin: 0 0 8px;
+                text-transform: uppercase;
+            }
+
+            .tagline {
+                font-size: 1.05rem;
+                color: var(--muted);
+                margin-bottom: 18px;
+            }
+
+            .quip {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                background: var(--tape);
+                border-radius: 999px;
+                padding: 6px 14px;
+                font-size: 0.9rem;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+            }
+
+            .actions {
+                margin-top: 20px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                text-decoration: none;
+                padding: 12px 18px;
+                border-radius: 10px;
+                font-weight: 700;
+                letter-spacing: 0.4px;
+                background: var(--acid);
+                color: #0b0f0d;
+                border: 2px solid transparent;
+                transition:
+                    transform 160ms ease,
+                    box-shadow 160ms ease;
+            }
+
+            .btn:hover,
+            .btn:focus-visible {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 25px rgba(168, 255, 62, 0.35);
+            }
+
+            .btn.secondary {
+                background: transparent;
+                color: var(--ink);
+                border-color: var(--ember);
+            }
+
+            .status {
+                display: grid;
+                gap: 14px;
+            }
+
+            .status h2 {
+                font-family: "Bungee", sans-serif;
+                margin: 0 0 10px;
+                text-transform: uppercase;
+                font-size: 1.2rem;
+            }
+
+            .status-card {
+                background: rgba(12, 15, 13, 0.85);
+                border-radius: 16px;
+                padding: 18px;
+                border: 1px dashed rgba(255, 255, 255, 0.12);
+            }
+
+            .status-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin: 6px 0;
+                font-size: 0.95rem;
+            }
+
+            .status-row span {
+                color: var(--muted);
+            }
+
+            .grid {
+                margin: 40px 0;
+                display: grid;
+                gap: 18px;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+
+            .panel {
+                background: var(--panel);
+                border-radius: 16px;
+                padding: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow: var(--shadow);
+            }
+
+            .panel h3 {
+                margin-top: 0;
+                font-family: "Bungee", sans-serif;
+                text-transform: uppercase;
+                font-size: 1.05rem;
+            }
+
+            .panel p {
+                color: var(--muted);
+                line-height: 1.5;
+            }
+
+            .panel code {
+                display: block;
+                margin-top: 12px;
+                background: #0d1310;
+                padding: 10px 12px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                color: var(--acid);
+                font-size: 0.88rem;
+            }
+
+            .ribbon {
+                margin: 38px 0 22px;
+                padding: 14px 18px;
+                border-radius: 14px;
+                background: linear-gradient(
+                    120deg,
+                    rgba(255, 155, 84, 0.15),
+                    rgba(168, 255, 62, 0.15)
+                );
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                display: flex;
+                justify-content: space-between;
+                gap: 16px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+
+            .ribbon strong {
+                font-family: "Bungee", sans-serif;
+                text-transform: uppercase;
+                font-size: 1rem;
+            }
+
+            .faq {
+                display: grid;
+                gap: 16px;
+            }
+
+            .faq-item {
+                background: var(--panel);
+                padding: 18px;
+                border-radius: 14px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+            }
+
+            .faq-item h4 {
+                margin: 0 0 10px;
+                font-size: 1rem;
+            }
+
+            .footer {
+                margin-top: 40px;
+                text-align: center;
+                color: var(--muted);
+                font-size: 0.9rem;
+            }
+
+            .pulse {
+                position: relative;
+            }
+
+            .pulse::after {
+                content: "";
+                position: absolute;
+                inset: -6px;
+                border-radius: 12px;
+                border: 1px solid rgba(168, 255, 62, 0.5);
+                opacity: 0;
+                animation: ping 2.4s infinite;
+            }
+
+            @keyframes ping {
+                0% {
+                    opacity: 0;
+                    transform: scale(0.9);
+                }
+                40% {
+                    opacity: 0.5;
+                }
+                100% {
+                    opacity: 0;
+                    transform: scale(1.15);
+                }
+            }
+
+            @media (max-width: 720px) {
+                header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+
+                nav a {
+                    margin-left: 0;
+                    margin-right: 12px;
+                }
+
+                .ribbon {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="page">
+            <header>
+                <div class="logo">
+                    <div class="logo-badge" aria-hidden="true"></div>
+                    <div class="logo-title">CBN Data Bunker</div>
+                </div>
+                <nav>
+                    <a href="#about">About</a>
+                    <a href="#endpoints">Endpoints</a>
+                    <a href="#faq">FAQ</a>
+                </nav>
+            </header>
+
+            <section class="hero" id="about">
+                <div class="hero-card pulse">
+                    <h1>All the data. None of the zombies.</h1>
+                    <p class="tagline">
+                        A cheerful bunker for Cataclysm: Bright Nights data.
+                        JSON, translations, and GFX assets delivered fast,
+                        compressed hard, and occasionally haunted.
+                    </p>
+                    <div class="quip" id="quip">
+                        Signal status: loud, proud, and mildly sarcastic.
+                    </div>
+                    <div class="actions">
+                        <a class="btn" href="/builds.json">Grab builds.json</a>
+                        <a
+                            class="btn secondary"
+                            href="https://cbn-guide.pages.dev/"
+                            >Visit the Guide</a
+                        >
+                    </div>
+                </div>
+
+                <div class="hero-card status">
+                    <h2>Survival Console</h2>
+                    <div class="status-card">
+                        <div class="status-row">
+                            <strong>Mirror State</strong>
+                            <span>Hydrated and humming</span>
+                        </div>
+                        <div class="status-row">
+                            <strong>Compression</strong>
+                            <span>Gzip and Brotli, double locked</span>
+                        </div>
+                        <div class="status-row">
+                            <strong>Asset Vault</strong>
+                            <span>WebP only, no hoarding PNG</span>
+                        </div>
+                        <div class="status-row">
+                            <strong>Snack Supply</strong>
+                            <span>Mostly trail mix</span>
+                        </div>
+                    </div>
+                    <p class="tagline">
+                        If you hear a faint hiss, that is just the brotli
+                        chamber venting happy little bytes.
+                    </p>
+                </div>
+            </section>
+
+            <div class="ribbon">
+                <strong>Pro Tip</strong>
+                <span
+                    >Start with `builds.json`, pick a date, then dive into
+                    `/data/DATE/` like a fearless intern with a clipboard.</span
+                >
+            </div>
+
+            <section class="grid" id="endpoints">
+                <div class="panel">
+                    <h3>Build Index</h3>
+                    <p>
+                        Metadata for every snapshot. Great for cron jobs,
+                        dashboards, and dramatic monologues.
+                    </p>
+                    <code>/builds.json</code>
+                </div>
+                <div class="panel">
+                    <h3>Game Objects</h3>
+                    <p>
+                        Everything the game knows, in one deliciously large JSON
+                        file.
+                    </p>
+                    <code>/data/2024-01-10/all.json</code>
+                </div>
+                <div class="panel">
+                    <h3>Mod Catalog</h3>
+                    <p>All mods, all at once, no scavenging required.</p>
+                    <code>/data/2024-01-10/all_mods.json</code>
+                </div>
+                <div class="panel">
+                    <h3>Translations</h3>
+                    <p>
+                        Localized strings for when your bunker goes
+                        international.
+                    </p>
+                    <code>/data/2024-01-10/lang/fr.json</code>
+                </div>
+                <div class="panel">
+                    <h3>GFX Assets</h3>
+                    <p>
+                        WebP sprites, compressed to survive both bandwidth and
+                        existential dread.
+                    </p>
+                    <code>/data/2024-01-10/gfx/</code>
+                </div>
+                <div class="panel">
+                    <h3>Extra Crunch</h3>
+                    <p>
+                        Use `.gz` or `.br` files for peak performance and
+                        minimal screaming.
+                    </p>
+                    <code>/data/2024-01-10/all.json.br</code>
+                </div>
+            </section>
+
+            <section class="panel">
+                <h3>Quickstart Command Line</h3>
+                <p>
+                    Because typing by hand is how you get eaten by an angry JSON
+                    parser.
+                </p>
+                <code
+                    >curl -s https://cbn-data.pages.dev/builds.json | jq
+                    '.[0]'</code
+                >
+                <code
+                    >curl -s
+                    https://cbn-data.pages.dev/data/2024-01-10/all.json.br
+                    --output all.json.br</code
+                >
+            </section>
+
+            <section class="faq" id="faq">
+                <div class="faq-item">
+                    <h4>Is this safe?</h4>
+                    <p>
+                        It is as safe as any bunker full of compressed game
+                        data. No zombies inside, just bytes.
+                    </p>
+                </div>
+                <div class="faq-item">
+                    <h4>Why so many files?</h4>
+                    <p>
+                        Because history matters, and also because future you
+                        will blame past you if you prune too hard.
+                    </p>
+                </div>
+                <div class="faq-item">
+                    <h4>Can I cache it?</h4>
+                    <p>
+                        Yes. Cache it like you cache canned beans. The headers
+                        are already doing most of the work.
+                    </p>
+                </div>
+                <div class="faq-item">
+                    <h4>Where did this data come from?</h4>
+                    <p>
+                        Direct from Cataclysm: Bright Nights releases, freshly
+                        washed and mostly sorted.
+                    </p>
+                </div>
+            </section>
+
+            <div class="footer">
+                Built for The Hitchhiker's Guide to Cataclysm: Bright Nights.
+                Now featuring 12 percent more apocalypse.
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                var quips = [
+                    "Status: loud, proud, and mildly sarcastic.",
+                    "Data verified by one raccoon with a clipboard.",
+                    "If you can read this, the bunker doors are open.",
+                    "Fresh bytes, no bites.",
+                    "Built to survive lightning, zombies, and YAML.",
+                    "This is not a drill. It is a JSON mirror.",
+                ];
+                var node = document.getElementById("quip");
+                if (!node) return;
+                var index = 0;
+                setInterval(function () {
+                    index = (index + 1) % quips.length;
+                    node.textContent = quips[index];
+                }, 3800);
+            })();
+        </script>
+    </body>
+</html>
