@@ -3,10 +3,10 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>CBN Data Bunker</title>
+        <title>C:BN Data Bunker - Dont Panic Edition</title>
         <meta
             name="description"
-            content="Cataclysm: Bright Nights data mirror with JSON, translations, and GFX."
+            content="Cataclysm: Bright Nights data mirror with JSON, translations, GFX, and a Hitchhiker approved lack of panic."
         />
         <style>
             @import url("https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&display=swap");
@@ -21,6 +21,7 @@
                 --rust: #d24d1f;
                 --tape: #1f2a23;
                 --panel: #121714;
+                --sky: #6ee7ff;
                 --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
             }
 
@@ -37,6 +38,11 @@
                 margin: 0;
                 color: var(--ink);
                 background:
+                    radial-gradient(
+                        900px 420px at 20% 105%,
+                        rgba(110, 231, 255, 0.14),
+                        transparent 60%
+                    ),
                     radial-gradient(
                         1200px 600px at 10% -10%,
                         rgba(168, 255, 62, 0.16),
@@ -69,6 +75,7 @@
                 justify-content: space-between;
                 gap: 16px;
                 padding: 8px 0 24px;
+                animation: reveal 0.9s ease forwards;
             }
 
             .logo {
@@ -158,7 +165,7 @@
             h1 {
                 font-family: "Bungee", sans-serif;
                 font-size: clamp(2.2rem, 4vw, 3.4rem);
-                margin: 0 0 8px;
+                margin: 12px 0 8px;
                 text-transform: uppercase;
             }
 
@@ -166,6 +173,20 @@
                 font-size: 1.05rem;
                 color: var(--muted);
                 margin-bottom: 18px;
+            }
+
+            .dont-panic {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 14px;
+                border-radius: 999px;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                background: rgba(110, 231, 255, 0.12);
+                text-transform: uppercase;
+                font-weight: 700;
+                font-size: 0.85rem;
+                letter-spacing: 1px;
             }
 
             .quip {
@@ -235,11 +256,12 @@
             }
 
             .status-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
+                display: grid;
+                grid-template-columns: 150px 1fr;
+                align-items: baseline;
                 margin: 6px 0;
                 font-size: 0.95rem;
+                column-gap: 16px;
             }
 
             .status-row span {
@@ -307,6 +329,57 @@
                 font-size: 1rem;
             }
 
+            .art-grid {
+                margin: 26px 0 42px;
+                display: grid;
+                gap: 18px;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+
+            .art-card {
+                background: var(--panel);
+                border-radius: 18px;
+                padding: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow: var(--shadow);
+                position: relative;
+                overflow: hidden;
+                min-height: 200px;
+                display: grid;
+                gap: 12px;
+                align-content: start;
+            }
+
+            .art-card::after {
+                content: "Mostly Harmless";
+                position: absolute;
+                bottom: 12px;
+                right: 12px;
+                font-size: 0.75rem;
+                letter-spacing: 0.8px;
+                color: rgba(255, 255, 255, 0.5);
+                text-transform: uppercase;
+            }
+
+            .art-svg {
+                width: 100%;
+                height: 160px;
+                display: block;
+                filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.35));
+                animation: float 5s ease-in-out infinite;
+            }
+
+            .sticker {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 12px;
+                border-radius: 999px;
+                background: rgba(210, 77, 31, 0.16);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                font-size: 0.85rem;
+            }
+
             .faq {
                 display: grid;
                 gap: 16px;
@@ -331,6 +404,59 @@
                 font-size: 0.9rem;
             }
 
+            .easter-egg {
+                position: fixed;
+                right: 18px;
+                bottom: 18px;
+                max-width: 260px;
+                background: #0d1310;
+                border-radius: 14px;
+                padding: 14px 16px;
+                border: 1px solid rgba(168, 255, 62, 0.6);
+                box-shadow: var(--shadow);
+                opacity: 0;
+                transform: translateY(12px) scale(0.98);
+                pointer-events: none;
+                transition:
+                    opacity 180ms ease,
+                    transform 180ms ease;
+                z-index: 20;
+            }
+
+            .easter-egg.show {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                pointer-events: auto;
+            }
+
+            .egg-title {
+                font-family: "Bungee", sans-serif;
+                text-transform: uppercase;
+                font-size: 0.9rem;
+                margin-bottom: 6px;
+            }
+
+            .easter-egg p {
+                margin: 0 0 10px;
+                color: var(--muted);
+                font-size: 0.85rem;
+            }
+
+            .egg-close {
+                background: transparent;
+                color: var(--ink);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 999px;
+                padding: 4px 10px;
+                font-size: 0.75rem;
+                cursor: pointer;
+            }
+
+            .egg-close:hover,
+            .egg-close:focus-visible {
+                border-color: var(--acid);
+            }
+
             .pulse {
                 position: relative;
             }
@@ -343,6 +469,14 @@
                 border: 1px solid rgba(168, 255, 62, 0.5);
                 opacity: 0;
                 animation: ping 2.4s infinite;
+                pointer-events: none;
+            }
+
+            .reveal {
+                opacity: 0;
+                transform: translateY(12px);
+                animation: reveal 0.9s ease forwards;
+                animation-delay: var(--delay, 0s);
             }
 
             @keyframes ping {
@@ -356,6 +490,27 @@
                 100% {
                     opacity: 0;
                     transform: scale(1.15);
+                }
+            }
+
+            @keyframes reveal {
+                from {
+                    opacity: 0;
+                    transform: translateY(12px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            @keyframes float {
+                0%,
+                100% {
+                    transform: translateY(0);
+                }
+                50% {
+                    transform: translateY(-8px);
                 }
             }
 
@@ -382,26 +537,27 @@
             <header>
                 <div class="logo">
                     <div class="logo-badge" aria-hidden="true"></div>
-                    <div class="logo-title">CBN Data Bunker</div>
+                    <div class="logo-title">C:BN Data Bunker</div>
                 </div>
                 <nav>
                     <a href="#about">About</a>
+                    <a href="#improbability">Improbability</a>
                     <a href="#endpoints">Endpoints</a>
                     <a href="#faq">FAQ</a>
                 </nav>
             </header>
 
             <section class="hero" id="about">
-                <div class="hero-card pulse">
-                    <h1>All the data. None of the zombies.</h1>
+                <div class="hero-card pulse reveal" style="--delay: 0.05s">
+                    <div class="dont-panic">Dont Panic</div>
+                    <h1>The Hitchhiker's Guide to C:BN Data</h1>
                     <p class="tagline">
-                        A cheerful bunker for Cataclysm: Bright Nights data.
-                        JSON, translations, and GFX assets delivered fast,
-                        compressed hard, and occasionally haunted.
+                        Your improbably accurate guide to Cataclysm: Bright
+                        Nights data. JSON, translations, and GFX assets
+                        delivered faster than a towel can be waved. 42 percent
+                        more helpful.
                     </p>
-                    <div class="quip" id="quip">
-                        Signal status: loud, proud, and mildly sarcastic.
-                    </div>
+                    <div class="quip" id="quip">1099 commits and counting.</div>
                     <div class="actions">
                         <a class="btn" href="/builds.json">Grab builds.json</a>
                         <a
@@ -412,42 +568,197 @@
                     </div>
                 </div>
 
-                <div class="hero-card status">
-                    <h2>Survival Console</h2>
+                <div class="hero-card status reveal" style="--delay: 0.15s">
+                    <h2>Improbability Console</h2>
                     <div class="status-card">
                         <div class="status-row">
                             <strong>Mirror State</strong>
-                            <span>Hydrated and humming</span>
+                            <span>Mostly hydrated</span>
                         </div>
                         <div class="status-row">
                             <strong>Compression</strong>
-                            <span>Gzip and Brotli, double locked</span>
+                            <span>Gzip and Brotli, double frothy</span>
                         </div>
                         <div class="status-row">
                             <strong>Asset Vault</strong>
-                            <span>WebP only, no hoarding PNG</span>
+                            <span>WebP only, no hoarding PNGs</span>
                         </div>
                         <div class="status-row">
-                            <strong>Snack Supply</strong>
-                            <span>Mostly trail mix</span>
+                            <strong>Towel Inventory</strong>
+                            <span>Always within arm reach</span>
                         </div>
                     </div>
                     <p class="tagline">
                         If you hear a faint hiss, that is just the brotli
-                        chamber venting happy little bytes.
+                        chamber venting happy little bytes and tiny existential
+                        questions.
                     </p>
                 </div>
             </section>
 
-            <div class="ribbon">
-                <strong>Pro Tip</strong>
+            <div class="ribbon reveal" style="--delay: 0.25s">
+                <strong>Pro Tip From The Guide</strong>
                 <span
                     >Start with `builds.json`, pick a date, then dive into
-                    `/data/DATE/` like a fearless intern with a clipboard.</span
+                    `/data/DATE/` like a fearless intern with a towel.</span
                 >
             </div>
 
-            <section class="grid" id="endpoints">
+            <section
+                class="art-grid"
+                id="improbability"
+                aria-label="Improbable art gallery"
+            >
+                <div class="art-card reveal" style="--delay: 0.3s">
+                    <div class="sticker">Infinite Improbability Drive</div>
+                    <svg
+                        class="art-svg"
+                        viewBox="0 0 320 160"
+                        role="img"
+                        aria-label="Swirling improbability engine"
+                    >
+                        <defs>
+                            <linearGradient
+                                id="spiral"
+                                x1="0"
+                                x2="1"
+                                y1="0"
+                                y2="1"
+                            >
+                                <stop offset="0%" stop-color="#a8ff3e" />
+                                <stop offset="50%" stop-color="#6ee7ff" />
+                                <stop offset="100%" stop-color="#ff9b54" />
+                            </linearGradient>
+                        </defs>
+                        <rect width="320" height="160" rx="18" fill="#0d1310" />
+                        <path
+                            d="M40 80c40-60 100-60 140 0s100 60 140 0"
+                            fill="none"
+                            stroke="url(#spiral)"
+                            stroke-width="10"
+                            stroke-linecap="round"
+                        />
+                        <circle
+                            cx="80"
+                            cy="80"
+                            r="28"
+                            fill="none"
+                            stroke="#ff9b54"
+                            stroke-width="6"
+                        />
+                        <circle
+                            cx="160"
+                            cy="80"
+                            r="44"
+                            fill="none"
+                            stroke="#a8ff3e"
+                            stroke-width="6"
+                        />
+                        <circle
+                            cx="240"
+                            cy="80"
+                            r="28"
+                            fill="none"
+                            stroke="#6ee7ff"
+                            stroke-width="6"
+                        />
+                        <text
+                            x="160"
+                            y="92"
+                            text-anchor="middle"
+                            fill="#e6f2e2"
+                            font-size="16"
+                        >
+                            42
+                        </text>
+                    </svg>
+                </div>
+                <div class="art-card reveal" style="--delay: 0.4s">
+                    <div class="sticker">Babel Fish Translation Rig</div>
+                    <svg
+                        class="art-svg"
+                        viewBox="0 0 320 160"
+                        role="img"
+                        aria-label="Babel fish translation rig"
+                    >
+                        <rect width="320" height="160" rx="18" fill="#0d1310" />
+                        <ellipse
+                            cx="100"
+                            cy="80"
+                            rx="48"
+                            ry="30"
+                            fill="#6ee7ff"
+                            opacity="0.8"
+                        />
+                        <ellipse
+                            cx="220"
+                            cy="80"
+                            rx="48"
+                            ry="30"
+                            fill="#a8ff3e"
+                            opacity="0.7"
+                        />
+                        <path
+                            d="M130 80h60"
+                            stroke="#ff9b54"
+                            stroke-width="8"
+                            stroke-linecap="round"
+                        />
+                        <circle cx="70" cy="80" r="10" fill="#0b0f0d" />
+                        <circle cx="250" cy="80" r="10" fill="#0b0f0d" />
+                        <text
+                            x="160"
+                            y="130"
+                            text-anchor="middle"
+                            fill="#e6f2e2"
+                            font-size="14"
+                        >
+                            Universal Translator
+                        </text>
+                    </svg>
+                </div>
+                <div class="art-card reveal" style="--delay: 0.5s">
+                    <div class="sticker">Pan Galactic Data Blaster</div>
+                    <svg
+                        class="art-svg"
+                        viewBox="0 0 320 160"
+                        role="img"
+                        aria-label="Pan Galactic Data Blaster"
+                    >
+                        <rect width="320" height="160" rx="18" fill="#0d1310" />
+                        <polygon
+                            points="40,120 120,40 280,60 200,140"
+                            fill="#ff9b54"
+                            opacity="0.8"
+                        />
+                        <circle cx="120" cy="60" r="20" fill="#a8ff3e" />
+                        <circle
+                            cx="240"
+                            cy="110"
+                            r="26"
+                            fill="#6ee7ff"
+                            opacity="0.9"
+                        />
+                        <path
+                            d="M70 130c20-10 40-10 60 0"
+                            stroke="#e6f2e2"
+                            stroke-width="4"
+                            stroke-linecap="round"
+                        />
+                        <text
+                            x="160"
+                            y="90"
+                            text-anchor="middle"
+                            fill="#0b0f0d"
+                            font-size="12"
+                        >
+                            DATA
+                        </text>
+                    </svg>
+                </div>
+            </section>
+
+            <section class="grid reveal" id="endpoints" style="--delay: 0.6s">
                 <div class="panel">
                     <h3>Build Index</h3>
                     <p>
@@ -460,22 +771,25 @@
                     <h3>Game Objects</h3>
                     <p>
                         Everything the game knows, in one deliciously large JSON
-                        file.
+                        file. It knows too much.
                     </p>
-                    <code>/data/2024-01-10/all.json</code>
+                    <code>/data/2025-12-31/all.json</code>
                 </div>
                 <div class="panel">
                     <h3>Mod Catalog</h3>
-                    <p>All mods, all at once, no scavenging required.</p>
-                    <code>/data/2024-01-10/all_mods.json</code>
+                    <p>
+                        All mods, all at once, no scavenging required. Bring
+                        snacks anyway.
+                    </p>
+                    <code>/data/2025-12-31/all_mods.json</code>
                 </div>
                 <div class="panel">
                     <h3>Translations</h3>
                     <p>
                         Localized strings for when your bunker goes
-                        international.
+                        interstellar.
                     </p>
-                    <code>/data/2024-01-10/lang/fr.json</code>
+                    <code>/data/2025-12-31/lang/fr.json</code>
                 </div>
                 <div class="panel">
                     <h3>GFX Assets</h3>
@@ -483,7 +797,7 @@
                         WebP sprites, compressed to survive both bandwidth and
                         existential dread.
                     </p>
-                    <code>/data/2024-01-10/gfx/</code>
+                    <code>/data/2025-12-31/gfx/</code>
                 </div>
                 <div class="panel">
                     <h3>Extra Crunch</h3>
@@ -491,11 +805,11 @@
                         Use `.gz` or `.br` files for peak performance and
                         minimal screaming.
                     </p>
-                    <code>/data/2024-01-10/all.json.br</code>
+                    <code>/data/1964-01-08/all.json</code>
                 </div>
             </section>
 
-            <section class="panel">
+            <section class="panel reveal" style="--delay: 0.7s">
                 <h3>Quickstart Command Line</h3>
                 <p>
                     Because typing by hand is how you get eaten by an angry JSON
@@ -506,13 +820,12 @@
                     '.[0]'</code
                 >
                 <code
-                    >curl -s
-                    https://cbn-data.pages.dev/data/2024-01-10/all.json.br
-                    --output all.json.br</code
+                    >curl -s https://cbn-data.pages.dev/data/2025-12-31/all.json
+                    --output all.json</code
                 >
             </section>
 
-            <section class="faq" id="faq">
+            <section class="faq reveal" id="faq" style="--delay: 0.8s">
                 <div class="faq-item">
                     <h4>Is this safe?</h4>
                     <p>
@@ -545,19 +858,32 @@
 
             <div class="footer">
                 Built for The Hitchhiker's Guide to Cataclysm: Bright Nights.
-                Now featuring 12 percent more apocalypse.
+                Now featuring 0.4 percent more apocalypse.
             </div>
+        </div>
+
+        <div class="easter-egg" id="easter-egg" aria-hidden="true">
+            <div class="egg-title">Towel Protocol Engaged</div>
+            <p>
+                You found the improbability cache. Reward: one shiny data byte
+                and a stern warning about Vogon poetry.
+            </p>
+            <button class="egg-close" type="button" aria-label="Dismiss">
+                Hide Again
+            </button>
         </div>
 
         <script>
             (function () {
                 var quips = [
-                    "Status: loud, proud, and mildly sarcastic.",
-                    "Data verified by one raccoon with a clipboard.",
+                    "Status: loud, proud, and improbably V60-ied.",
+                    "Data verified by one raccoon with a voltmeter.",
                     "If you can read this, the bunker doors are open.",
-                    "Fresh bytes, no bites.",
-                    "Built to survive lightning, zombies, and YAML.",
+                    "Fresh bytes, no bites, no Triffids.",
+                    "Built to survive lightning, zombies, and bad poetry.",
                     "This is not a drill. It is a JSON mirror.",
+                    "Mostly harmless. Entirely useful.",
+                    "Pan Galactic Gargle Blaster not included.",
                 ];
                 var node = document.getElementById("quip");
                 if (!node) return;
@@ -566,6 +892,54 @@
                     index = (index + 1) % quips.length;
                     node.textContent = quips[index];
                 }, 3800);
+
+                var egg = document.getElementById("easter-egg");
+                if (!egg) return;
+                var close = egg.querySelector(".egg-close");
+                var badge = document.querySelector(".logo-badge");
+                var secret = "towel";
+                var buffer = "";
+                var clicks = 0;
+                var clickTimer;
+
+                function showEgg() {
+                    egg.classList.add("show");
+                    egg.setAttribute("aria-hidden", "false");
+                }
+
+                function hideEgg() {
+                    egg.classList.remove("show");
+                    egg.setAttribute("aria-hidden", "true");
+                }
+
+                if (close) {
+                    close.addEventListener("click", hideEgg);
+                }
+
+                if (badge) {
+                    badge.addEventListener("click", function () {
+                        clicks += 1;
+                        if (clicks >= 5) {
+                            showEgg();
+                            clicks = 0;
+                        }
+                        clearTimeout(clickTimer);
+                        clickTimer = setTimeout(function () {
+                            clicks = 0;
+                        }, 1200);
+                    });
+                }
+
+                document.addEventListener("keydown", function (event) {
+                    if (event.key.length !== 1) return;
+                    buffer = (buffer + event.key.toLowerCase()).slice(
+                        -secret.length,
+                    );
+                    if (buffer === secret) {
+                        showEgg();
+                        buffer = "";
+                    }
+                });
             })();
         </script>
     </body>
