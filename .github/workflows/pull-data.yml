@@ -87,7 +87,7 @@ jobs:
               
               # Find all PNG files in this tileset
               png_files=$(find "$tileset_dir" -type f -name "*.png" 2>/dev/null)
-              png_count=$(echo "$png_files" | grep -c "\.png$" || echo "0")
+              png_count=$(echo "$png_files" | grep -c "\.png$" || true)
               
               if [ "$png_count" -gt 0 ]; then
                 echo "  🎨 Processing $tileset_name ($png_count PNGs)"
@@ -109,9 +109,9 @@ jobs:
               fi
             done
             
-            if [ $build_converted -gt 0 ]; then
+            if [ "$build_converted" -gt 0 ]; then
               echo "  ✅ Converted $build_converted files from $build_name"
-              if [ $build_failed -gt 0 ]; then
+              if [ "$build_failed" -gt 0 ]; then
                 echo "  ⚠️  Failed: $build_failed files"
               fi
               total_converted=$((total_converted + build_converted))
@@ -124,7 +124,7 @@ jobs:
           
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📊 Summary: Converted $total_converted files"
-          if [ $total_failed -gt 0 ]; then
+          if [ "$total_failed" -gt 0 ]; then
             echo "⚠️  Failed: $total_failed files"
           fi
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
