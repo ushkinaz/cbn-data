@@ -15,12 +15,11 @@
   Cache-Control: public, max-age=60, stale-while-revalidate=43200
   X-Robots-Tag: noindex
 
-/data/data/2025-08-20/all.json
+/data/2025-08-20/all.json
   Content-Encoding: br
   Content-Type: application/json
   Content-Length: 2040143
   Cache-Control: public, max-age=3600, stale-while-revalidate=86400, no-transform
 
-# 4. Prevent indexing of raw JSON data
 /data/*.json
   X-Robots-Tag: noindex
