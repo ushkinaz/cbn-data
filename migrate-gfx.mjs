@@ -1,18 +1,35 @@
 // @ts-check
 /**
- * Migration script to fetch missing GFX files and precompress JSON
+ * GFX Migration & JSON Precompression
  * 
- * This script:
- * 1. Reads builds.json to find existing builds
- * 2. Identifies builds missing GFX files
- * 3. Downloads upstream zipballs for those builds
- * 4. Extracts GFX assets and converts PNG to WebP
- * 5. Precompresses all JSON files (creates .gz and .br variants)
- * 6. Writes files to build directories
- * 7. Prepares changes for commit
+ * Backfills GFX files for old builds, converts PNGs to WebP, and precompresses JSON files.
+ * 
+ * Prerequisites:
+ *   - brew install webp brotli  (macOS)
+ *   - sudo apt-get install webp brotli  (Linux)
+ *   - yarn install --frozen-lockfile --ignore-engines
+ *   - export GITHUB_TOKEN=your_token_here
  * 
  * Usage:
- *   GITHUB_TOKEN=xxx node migrate-gfx.mjs [--dry-run] [--branch=main] [--build=2024-01-01]
+ *   node migrate-gfx.mjs --dry-run              # Test run (recommended first)
+ *   node migrate-gfx.mjs                        # Live migration
+ *   node migrate-gfx.mjs --force                # Force re-process
+ *   node migrate-gfx.mjs --build=2024-01-10     # Specific build
+ *   node migrate-gfx.mjs --branch=dev           # Custom branch
+ * 
+ * What it does:
+ *   1. Checks out target branch to data_workspace/
+ *   2. Finds builds missing GFX or compressed JSON
+ *   3. Downloads release zipballs (if GFX needed)
+ *   4. Extracts GFX, converts PNG→WebP (if GFX needed)
+ *   5. Deletes original PNGs
+ *   6. Precompresses all JSON (creates .gz and .br) (if compression needed)
+ * 
+ * After migration:
+ *   cd data_workspace
+ *   git status
+ *   git add -A && git commit -m "Backfill GFX (WebP) and precompress JSON"
+ *   git push origin main
  */
 
 import AdmZip from "adm-zip";

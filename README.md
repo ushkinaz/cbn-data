@@ -1,72 +1,94 @@
 # cbn-data
 
-This repo mirrors the JSON and translation data from nightly and release versions of [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Cataclysm-BN) and deploys it at [https://cbn-data.pages.dev/](https://cbn-data.pages.dev/) for use in other projects, most notably the [The Hitchhiker's Guide to the Cataclysm: Bright Nights](https://cbn-guide.pages.dev/). The data is updated automatically every 12 hours.
+Game data from [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Cataclysm-BN) updated every 12 hours and deployed at [cbn-data.pages.dev](https://cbn-data.pages.dev/).
 
-## Status
-[![Pull Cataclysm-BN data](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml/badge.svg?branch=action)](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml)
-[![Prune Old Data](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml/badge.svg?branch=action)](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml)
+[![Pull Data](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml/badge.svg)](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml)
+[![Prune Data](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml/badge.svg)](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml)
+
+### Workflows
+
+![Workflows](workflows.png)
 
 ## Usage
 
-The data is committed to this repository in the `main` branch, while the code for updating the data is in the `action` branch (i.e. this one).
-
-The data is available through `cbn-data.pages.dev` URLs, and you can use it directly in your projects. For example, to get the JSON data for the latest experimental version of the game, you can use the following URL:
+### Get available versions
 
 ```
-https://cbn-data.pages.dev/data/latest/all.json
+https://cbn-data.pages.dev/builds.json
 ```
 
-The structure of the `all.json` file is:
+### Get game data
 
-```json5
+```
+https://cbn-data.pages.dev/data/2024-01-10/all.json
+https://cbn-data.pages.dev/data/2024-01-10/all_mods.json
+```
+
+**Structure:**
+```json
 {
-  "build_number": "[tag name, e.g. 2024-05-13]",
+  "build_number": "2024-01-10",
   "release": { /* GitHub release data */ },
-  "data": [
-    /* every JSON object from the game's data files */
-  ]
+  "data": [ /* game objects with __filename field */ ]
 }
 ```
 
-Each JSON object in the `data` array is a single object from the game's data files, with an additional `__filename` field that contains the path to the file the object was found in and the line numbers.
-
-### Translations
-
-The translation data for a version is available under `data/[version]/lang/[language].json`. For example, to get the French translation for the latest experimental, you can use the following URL:
+### Get translations
 
 ```
-https://cbn-data.pages.dev/data/latest/lang/fr.json
+https://cbn-data.pages.dev/data/2024-01-10/lang/fr.json
+https://cbn-data.pages.dev/data/2024-01-10/lang/zh_CN_pinyin.json
 ```
 
-The format of the translation files is Jed-compatible, produced with [po2json](https://www.npmjs.com/package/po2json). The keys are the original strings from the game, and the values are the translations.
+Format: [Jed-compatible](https://www.npmjs.com/package/po2json), produced with po2json.
 
-#### Pinyin
-
-For Chinese translations, there is an additional `zh_*_pinyin.json` file that contains the pinyin for each string. For example, to get the pinyin for the Chinese translation of the latest experimental, you can use the following URL:
+### Get tileset graphics
 
 ```
-https://cbn-data.pages.dev/data/latest/lang/zh_CN_pinyin.json
+https://cbn-data.pages.dev/data/2024-01-10/gfx/UltimateCataclysm/...
 ```
 
-This file has the same format as the translation file, except the values are the pinyin for the strings. This can be helpful when implementing search functionality for Chinese translations.
+All graphics are WebP format. Original PNGs converted during build.
 
-### Tileset gfx
+## Performance
 
-Tileset assets are mirrored under `data/[version]/gfx/` with the same folder layout as the upstream `gfx` directory. The pull-data workflow converts PNG tiles to `.webp` format using `cwebp` to save space and improve loading times. Original PNGs are deleted after successful conversion.
+All JSON files have precompressed `.gz` and `.br` variants. Cloudflare Pages automatically serves the best compression based on client support:
+- Brotli-capable clients → `.br` (~90% smaller)
+- Gzip-capable clients → `.gz` (~85% smaller)
+- Legacy clients → original JSON
+
+## Repository Structure
+
+- `action` branch: CI workflows and scripts
+- `main` branch: Published data (deployed)
+- `dev` branch: Development data (sometimes)
+
+## Local Development
+
+```bash
+# Clone action branch only
+git clone --single-branch https://github.com/ushkinaz/cbn-data
+
+# Install dependencies
+yarn install --frozen-lockfile --ignore-engines
+
+# Run data pull (dry-run by default)
+node pull-data-launcher.js
+
+# Run with actual writes
+GITHUB_TOKEN=xxx node pull-data-launcher.js
+```
+
+## Data Retention
+
+Monthly pruning keeps:
+- All stable releases
+- All builds from last 30 days
+- Older builds on thinning schedule (every 2/4/8 days)
+- Drops builds older than 450 days
 
 ## Contributing
 
-To clone the repo without also downloading every historical version of the game, use the `--single-branch` option:
+Built for [The Hitchhiker's Guide to Cataclysm: Bright Nights](https://cbn-guide.pages.dev/).
 
-```
-git clone --single-branch https://github.com/ushkinaz/cbn-data
-```
-
-To run the update script locally, you'll need to have Node.js installed. Then you can run:
-
-```
-yarn
-node pull-data-launcher.js
-```
-
-Local runs write data to a `workspace/` directory in dry-run mode. The PNG-to-WebP conversion happens in the GitHub Actions workflow. To do a real run with commits, set `GITHUB_TOKEN` environment variable.
+Contributions welcome! See [AGENTS.md](AGENTS.md) for architecture details.
