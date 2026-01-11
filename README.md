@@ -1,4 +1,4 @@
-# cbn-data
+# Cataclysm: BN data
 
 Game data from [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Cataclysm-BN) updated every 12 hours and deployed at [cbn-data.pages.dev](https://cbn-data.pages.dev/).
 
@@ -14,30 +14,35 @@ Game data from [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Catacly
 ### Get available versions
 
 ```
-https://cbn-data.pages.dev/builds.json
+curl -s https://cbn-data.pages.dev/builds.json
 ```
 
 ### Get game data
 
 ```
-https://cbn-data.pages.dev/data/2024-01-10/all.json
-https://cbn-data.pages.dev/data/2024-01-10/all_mods.json
+curl -s https://cbn-data.pages.dev/data/2026-01-10/all.json
+```
+```
+curl -s https://cbn-data.pages.dev/data/2026-01-10/all_mods.json
 ```
 
 **Structure:**
 ```json
 {
-  "build_number": "2024-01-10",
-  "release": { /* GitHub release data */ },
-  "data": [ /* game objects with __filename field */ ]
+  "build_number": "2026-01-10",
+  "release": {  },
+  "data": [  ],
+  "mods": { }
 }
 ```
 
 ### Get translations
 
 ```
-https://cbn-data.pages.dev/data/2024-01-10/lang/fr.json
-https://cbn-data.pages.dev/data/2024-01-10/lang/zh_CN_pinyin.json
+curl -s https://cbn-data.pages.dev/data/2026-01-10/lang/fr.json
+```
+```
+curl -s https://cbn-data.pages.dev/data/2026-01-10/lang/zh_CN_pinyin.json
 ```
 
 Format: [Jed-compatible](https://www.npmjs.com/package/po2json), produced with po2json.
@@ -45,23 +50,53 @@ Format: [Jed-compatible](https://www.npmjs.com/package/po2json), produced with p
 ### Get tileset graphics
 
 ```
-https://cbn-data.pages.dev/data/2024-01-10/gfx/UltimateCataclysm/...
+curl -s https://cbn-data.pages.dev/data/2026-01-10/gfx/UltimateCataclysm/...
 ```
 
 All graphics are WebP format. Original PNGs converted during build.
 
 ## Performance
 
-All JSON files have precompressed `.gz` and `.br` variants. Cloudflare Pages automatically serves the best compression based on client support:
-- Brotli-capable clients → `.br` (~90% smaller)
-- Gzip-capable clients → `.gz` (~85% smaller)
-- Legacy clients → original JSON
+All JSON files are stored in the repository as precompressed Brotli streams, but retain the standard .json extension. 
+Cloudflare Pages is configured to serve these files with `Content-Encoding: br`.
+
+While Cloudflare can compress responses on the fly, it typically uses Brotli quality 4 for performance. Precompressing at quality 11 yields significantly smaller files.
+
+All graphics are converted to WebP format during the build. We use `cwebp -preset icon`, capturing massive savings without quality loss.
+
+**JSON Compression Comparison:**
+
+| Method | Size | Ratio | Notes |
+| :--- | :--- | :--- | :--- |
+| **Uncompressed** | 18.9 MB | 100% | Raw JSON size |
+| **Gzip** | 2.8 MB | 15% | Standard compression |
+| **Brotli (Q4)** | 2.6 MB | 14% | Cloudflare on-the-fly default |
+| **Brotli (Q11)**| 2.0 MB | 10% | **Stored in repository** |
+
+**GFX Compression Comparison:**
+
+| Format | Size | Ratio | Notes |
+| :--- | :--- | :--- | :--- |
+| **PNG** | 17.8 MB | 100% | Original tileset size |
+| **WebP** | 5.8 MB | 33% | **Stored in repository** |
+
+### Total Network Savings
+
+Comparing the baseline (Gzip JSON + PNG) against the current optimized stack (Brotli Q11 + WebP):
+
+| Stack | all.json | Tileset | Total |
+| :--- | :--- | :--- | :--- |
+| **Baseline** | 2.8 MB | 17.8 MB | **20.6 MB** |
+| **Optimized** | 2.0 MB | 5.8 MB | **7.8 MB** |
+
+**Total Reduction: ~62% smaller payloads.**
+
+- **Note:** Raw JSON and PNGs are not stored or served; clients must support Brotli and WebP.
 
 ## Repository Structure
 
 - `action` branch: CI workflows and scripts
 - `main` branch: Published data (deployed)
-- `dev` branch: Development data (sometimes)
 
 ## Local Development
 
@@ -91,4 +126,4 @@ Monthly pruning keeps:
 
 Built for [The Hitchhiker's Guide to Cataclysm: Bright Nights](https://cbn-guide.pages.dev/).
 
-Contributions welcome! See [AGENTS.md](AGENTS.md) for architecture details.
+Contributions welcome!
