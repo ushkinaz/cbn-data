@@ -300,7 +300,8 @@ export default async function run({ github, context, dryRun = false }) {
         writeFile(workspaceDir, "builds.json", JSON.stringify(builds));
     }
 
-
+    // Update semantic symlinks (stable/nightly)
+    updateSymlinks(workspaceDir, builds, dryRun);
 
     if (dryRun) {
         console.log("(DRY RUN) Skipping git commit.");
@@ -308,4 +309,53 @@ export default async function run({ github, context, dryRun = false }) {
     }
 
     console.log("Files written successfully. Commit should be handled by workflow.");
+}
+
+/**
+ * Create/update semantic symlinks for stable and nightly builds
+ * @param {string} workspaceDir
+ * @param {Array<{build_number: string, prerelease: boolean}>} builds
+ * @param {boolean} dryRun
+ */
+function updateSymlinks(workspaceDir, builds, dryRun) {
+    const dataDir = path.join(workspaceDir, "data");
+
+    // Find targets (builds are sorted newest first)
+    const stableTarget = builds.find(b => !b.prerelease)?.build_number;
+    const nightlyTarget = builds.find(b => b.prerelease)?.build_number;
+
+    const symlinks = [
+        { name: "stable", target: stableTarget },
+        { name: "nightly", target: nightlyTarget }
+    ];
+
+    console.group("Updating semantic symlinks...");
+    for (const { name, target } of symlinks) {
+        if (!target) {
+            console.log(`  ⚠️  No ${name} build found, skipping symlink`);
+            continue;
+        }
+
+        const linkPath = path.join(dataDir, name);
+
+        if (dryRun) {
+            console.log(`  (DRY RUN) Would create: ${name} -> ${target}`);
+            continue;
+        }
+
+        // Remove existing symlink/file/directory
+        try {
+            const stats = fs.lstatSync(linkPath);
+            if (stats.isSymbolicLink() || stats.isFile()) {
+                fs.unlinkSync(linkPath);
+            }
+        } catch (e) {
+            // Doesn't exist, that's fine
+        }
+
+        // Create relative symlink (target is just the directory name)
+        fs.symlinkSync(target, linkPath);
+        console.log(`  ✅ ${name} -> ${target}`);
+    }
+    console.groupEnd();
 }

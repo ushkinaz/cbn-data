@@ -122,6 +122,8 @@ Generates pinyin mappings for Chinese translations using the `pinyin` package.
 data_workspace/
 ├── builds.json              # Build metadata (NOT compressed - used by workflows)
 └── data/
+    ├── stable -> v0.9.1/    # Symlink to latest stable release
+    ├── nightly -> 2026-01-10/ # Symlink to latest prerelease
     └── 2024-01-10/
         ├── all.json         # Game objects (Brotli-compressed)
         ├── all_mods.json    # Mod data (Brotli-compressed)
@@ -132,8 +134,13 @@ data_workspace/
         └── gfx/             # WebP graphics
 ```
 
+**Symlinks:** `stable` and `nightly` are filesystem symlinks updated on each pull-data run.
+They provide stable URLs (`/data/stable/all.json`, `/data/nightly/all.json`) without
+needing to resolve via `builds.json`. Not included in `builds.json`.
+
 **Note:** All `.json` files are actually Brotli-compressed. The `_headers` file 
 instructs Cloudflare to serve them with `Content-Encoding: br`.
+
 
 ## Deployment
 

@@ -70,8 +70,8 @@ jobs:
             if [ ! -d "$build_dir" ]; then continue; fi
             build_name=$(basename "$build_dir")
             
-            # Skip special directories
-            if [[ "$build_name" == "latest"* ]]; then continue; fi
+            # Skip symlink directories
+            if [[ "$build_name" =~ ^(stable|nightly)$ ]]; then continue; fi
             
             # Check if gfx directory exists
             if [ ! -d "${build_dir}gfx" ]; then continue; fi
@@ -146,8 +146,8 @@ jobs:
             if [ ! -d "$build_dir" ]; then continue; fi
             build_name=$(basename "$build_dir")
             
-            # Skip special directories
-            if [[ "$build_name" == "latest"* ]]; then continue; fi
+            # Skip symlink directories
+            if [[ "$build_name" =~ ^(stable|nightly)$ ]]; then continue; fi
             
             # Check for compression marker
             if [ -f "${build_dir}.compressed" ]; then
