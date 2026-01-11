@@ -138,23 +138,22 @@ function hasCompressedJson(workspaceDir, buildTag) {
         return false;
     }
 
-    // Check if JSON files are Brotli-compressed by looking at the first JSON file
-    // Brotli files start with specific magic bytes (often starts with certain patterns)
-    // A simpler check: if the file is not valid JSON text, it's compressed
+    // Check for .compressed marker file (new strategy)
+    const markerPath = path.join(buildDir, ".compressed");
+    if (fs.existsSync(markerPath)) {
+        return true;
+    }
+
+    // Fallback: Use brotli -t to check if JSON files are compressed
     const allJsonPath = path.join(buildDir, "all.json");
     if (!fs.existsSync(allJsonPath)) {
         return false;
     }
 
     try {
-        // Read first few bytes to check if it's Brotli compressed
-        const buffer = fs.readFileSync(allJsonPath);
-        // Brotli streams typically don't start with '{' or '[' (JSON starts)
-        // If the file starts with '{' and is valid UTF-8, it's uncompressed
-        const firstByte = buffer[0];
-        // JSON files start with '{' (0x7B) or '[' (0x5B) or whitespace
-        // Compressed files typically have binary data
-        return firstByte !== 0x7B && firstByte !== 0x5B && firstByte !== 0x20 && firstByte !== 0x0A;
+        // Use brotli -t to test if the file is a valid Brotli stream
+        execSync(`brotli -t "${allJsonPath}"`, { stdio: "ignore" });
+        return true;
     } catch (error) {
         return false;
     }
@@ -455,7 +454,6 @@ async function migrate() {
                 jsonCount++;
 
                 // Brotli compression (quality 11 = maximum)
-                // This creates a .json.br file
                 try {
                     exec(`brotli -q 11 -k -f "${jsonFile}"`, { silent: true });
 
@@ -472,6 +470,11 @@ async function migrate() {
                 if (jsonCount % 10 === 0) {
                     process.stdout.write(`\r  📄 Processed ${jsonCount} JSON files...`);
                 }
+            }
+
+            // After successfully compressing all JSON files in the build, create marker
+            if (!dryRun) {
+                fs.writeFileSync(path.join(buildDir, ".compressed"), "true");
             }
         }
 

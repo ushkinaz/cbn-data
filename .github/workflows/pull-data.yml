@@ -138,39 +138,75 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           
-          json_count=0
-          compressed_count=0
+          total_json_count=0
+          total_compressed_count=0
           
-          # Find all JSON files (excluding .git directory)
-          while IFS= read -r -d '' json_file; do
-            ((json_count+=1))
+          # Iterate over build directories
+          for build_dir in data/*/; do
+            if [ ! -d "$build_dir" ]; then continue; fi
+            build_name=$(basename "$build_dir")
             
-            # Brotli compression (quality 11 = maximum)
-            # This creates a .json.br file
+            # Skip special directories
+            if [[ "$build_name" == "latest"* ]]; then continue; fi
+            
+            # Check for compression marker
+            if [ -f "${build_dir}.compressed" ]; then
+              echo "  ✅ $build_name is already compressed, skipping"
+              continue
+            fi
+            
+            echo "📦 Compressing $build_name build..."
+            build_json_count=0
+            build_compressed_count=0
+            
+            # Find all JSON files in this build directory
+            while IFS= read -r -d '' json_file; do
+              ((build_json_count+=1))
+              ((total_json_count+=1))
+              
+              # Brotli compression (quality 11 = maximum)
+              if brotli -q 11 -k -f "$json_file" 2>/dev/null; then
+                if [ -f "${json_file}.br" ]; then
+                  mv -f "${json_file}.br" "$json_file"
+                  ((build_compressed_count+=1))
+                  ((total_compressed_count+=1))
+                fi
+              fi
+            done < <(find "$build_dir" -type f -name "*.json" -print0)
+            
+            if [ "$build_compressed_count" -gt 0 ]; then
+              # Create compression marker
+              touch "${build_dir}.compressed"
+              echo "  ✨ Compressed $build_compressed_count files and marked as complete"
+            else
+              echo "  ⚠️  No JSON files found in $build_name"
+            fi
+          done
+          
+          # Also check root level JSON files (like builds.json)
+          echo "📦 Compressing root JSON files..."
+          while IFS= read -r -d '' json_file; do
+            ((total_json_count+=1))
+            
+            # Skip if already compressed
+            if brotli -t "$json_file" 2>/dev/null; then
+              echo "  ✅ $(basename "$json_file") is already compressed, skipping"
+              continue
+            fi
+            
             if brotli -q 11 -k -f "$json_file" 2>/dev/null; then
-              # Rename the compressed .br file to replace the original .json
               if [ -f "${json_file}.br" ]; then
                 mv -f "${json_file}.br" "$json_file"
-                ((compressed_count+=1))
+                ((total_compressed_count+=1))
               fi
             fi
-            
-            # Progress indicator every 10 files
-            if (( json_count % 10 == 0 )); then
-              echo -ne "\r  📄 Processed ${json_count} JSON files..."
-            fi
-          done < <(find . -path "./.git" -prune -o -type f -name "*.json" -print0)
-          
-          # Clear progress line
-          if (( json_count > 0 )); then
-            echo -ne "\r$(printf ' %.0s' {1..80})\r"
-          fi
+          done < <(find . -maxdepth 1 -type f -name "*.json" -print0)
           
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "📊 Compression Summary:"
-          echo "  📄 JSON files found: ${json_count}"
-          echo "  🗜️  Brotli compressed: ${compressed_count}"
+          echo "  📄 Total JSON files found: ${total_json_count}"
+          echo "  🗜️  Total Brotli compressed: ${total_compressed_count}"
           echo "  ℹ️  Files are now Brotli-compressed .json"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
