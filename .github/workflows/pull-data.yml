@@ -97,7 +97,7 @@ jobs:
                   webp_file="${png_file%.png}.webp"
                   
                   # Convert PNG to WebP with quality 80
-                  if cwebp -q 80 "$png_file" -o "$webp_file" >/dev/null 2>&1; then
+                  if cwebp -preset icon "$png_file" -o "$webp_file" >/dev/null 2>&1; then
                     # Delete the original PNG after successful conversion
                     rm "$png_file"
                     build_converted=$((build_converted + 1))
@@ -165,7 +165,7 @@ jobs:
               ((total_json_count+=1))
               
               # Brotli compression (quality 11 = maximum)
-              if brotli -q 11 -k -f "$json_file" 2>/dev/null; then
+              if brotli --best -k -f "$json_file" 2>/dev/null; then
                 if [ -f "${json_file}.br" ]; then
                   mv -f "${json_file}.br" "$json_file"
                   ((build_compressed_count+=1))
@@ -182,25 +182,6 @@ jobs:
               echo "  ⚠️  No JSON files found in $build_name"
             fi
           done
-          
-          # Also check root level JSON files (like builds.json)
-          echo "📦 Compressing root JSON files..."
-          while IFS= read -r -d '' json_file; do
-            ((total_json_count+=1))
-            
-            # Skip if already compressed
-            if brotli -t "$json_file" 2>/dev/null; then
-              echo "  ✅ $(basename "$json_file") is already compressed, skipping"
-              continue
-            fi
-            
-            if brotli -q 11 -k -f "$json_file" 2>/dev/null; then
-              if [ -f "${json_file}.br" ]; then
-                mv -f "${json_file}.br" "$json_file"
-                ((total_compressed_count+=1))
-              fi
-            fi
-          done < <(find . -maxdepth 1 -type f -name "*.json" -print0)
           
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

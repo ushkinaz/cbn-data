@@ -120,7 +120,7 @@ Generates pinyin mappings for Chinese translations using the `pinyin` package.
 
 ```
 data_workspace/
-├── builds.json              # Build metadata (Brotli-compressed)
+├── builds.json              # Build metadata (NOT compressed - used by workflows)
 └── data/
     └── 2024-01-10/
         ├── all.json         # Game objects (Brotli-compressed)
