@@ -1,7 +1,6 @@
 /builds.json
   Access-Control-Allow-Origin: *
-  Cache-Control: public, max-age=60, stale-while-revalidate=21600, no-transform
-  Content-Encoding: br
+  Cache-Control: public, max-age=60, stale-while-revalidate=21600
   Referrer-Policy: strict-origin-when-cross-origin
   Timing-Allow-Origin: *
   X-Content-Type-Options: nosniff
