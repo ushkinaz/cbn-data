@@ -1,6 +1,6 @@
 # Cataclysm: BN data
 
-Game data from [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Cataclysm-BN) updated every 12 hours and deployed at [cbn-data.pages.dev](https://cbn-data.pages.dev/).
+Game data from [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Cataclysm-BN) updated every 12 hours and deployed at [data.cataclysmbn-guide.com](https://data.cataclysmbn-guide.com/).
 
 [![Pull Data](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml/badge.svg)](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml)
 [![Prune Data](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml/badge.svg)](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml)
@@ -10,17 +10,17 @@ Game data from [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Catacly
 ### Get available versions
 
 ```
-curl -s https://cbn-data.pages.dev/builds.json
+curl -s https://data.cataclysmbn-guide.com/builds.json
 ```
 
 ### Get game data
 
 ```
-curl -s https://cbn-data.pages.dev/data/2026-01-10/all.json
+curl -s https://data.cataclysmbn-guide.com/data/2026-01-10/all.json
 ```
 
 ```
-curl -s https://cbn-data.pages.dev/data/2026-01-10/all_mods.json
+curl -s https://data.cataclysmbn-guide.com/data/2026-01-10/all_mods.json
 ```
 
 **Structure:**
@@ -37,11 +37,11 @@ curl -s https://cbn-data.pages.dev/data/2026-01-10/all_mods.json
 ### Get translations
 
 ```
-curl -s https://cbn-data.pages.dev/data/2026-01-10/lang/fr.json
+curl -s https://data.cataclysmbn-guide.com/data/2026-01-10/lang/fr.json
 ```
 
 ```
-curl -s https://cbn-data.pages.dev/data/2026-01-10/lang/zh_CN_pinyin.json
+curl -s https://data.cataclysmbn-guide.com/data/2026-01-10/lang/zh_CN_pinyin.json
 ```
 
 Format: [Jed-compatible](https://www.npmjs.com/package/po2json), produced with po2json.
@@ -49,7 +49,7 @@ Format: [Jed-compatible](https://www.npmjs.com/package/po2json), produced with p
 ### Get tileset graphics
 
 ```
-curl -s https://cbn-data.pages.dev/data/2026-01-10/gfx/UltimateCataclysm/...
+curl -s https://data.cataclysmbn-guide.com/data/2026-01-10/gfx/UltimateCataclysm/...
 ```
 
 All graphics are WebP format. Original PNGs converted during build.
@@ -150,6 +150,6 @@ Monthly pruning keeps:
 
 ## Contributing
 
-Built for [The Hitchhiker's Guide to Cataclysm: Bright Nights](https://cbn-guide.pages.dev/).
+Built for [The Hitchhiker's Guide to Cataclysm: Bright Nights](https://cataclysmbn-guide.com/).
 
 Contributions welcome!

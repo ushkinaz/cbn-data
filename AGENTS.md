@@ -1,6 +1,6 @@
 # Developer Guide
 
-Mirrors JSON, translation, and GFX data from Cataclysm: Bright Nights → [cbn-data.pages.dev](https://cbn-data.pages.dev/)
+Mirrors JSON, translation, and GFX data from Cataclysm: Bright Nights → [data.cataclysmbn-guide.com](https://data.cataclysmbn-guide.com/)
 
 ## Repository Structure
 
@@ -155,6 +155,6 @@ This achieves ~90% smaller file sizes while maintaining compatibility.
 
 ## Contributing
 
-Built for [The Hitchhiker's Guide to Cataclysm: Bright Nights](https://cbn-guide.pages.dev/).
+Built for [The Hitchhiker's Guide to Cataclysm: Bright Nights](https://cataclysmbn-guide.com/).
 
 Questions? Check script headers or workflow comments.
