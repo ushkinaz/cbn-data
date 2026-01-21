@@ -1,6 +1,7 @@
 # Cataclysm: BN data
 
 Game data from [Cataclysm: Bright Nights](https://github.com/cataclysmbn/Cataclysm-BN) updated every 12 hours and deployed at [data.cataclysmbn-guide.com](https://data.cataclysmbn-guide.com/).
+Built for [ushkinaz/cbn-guide](https://github.com/ushkinaz/cbn-guide/)
 
 [![Pull Data](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml/badge.svg)](https://github.com/ushkinaz/cbn-data/actions/workflows/pull-data.yml)
 [![Prune Data](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml/badge.svg)](https://github.com/ushkinaz/cbn-data/actions/workflows/prune-data.yml)
