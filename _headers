@@ -1,31 +1,32 @@
-/builds.json
+/data/*.json
   Access-Control-Allow-Origin: *
-  Cache-Control: public, max-age=60, stale-while-revalidate=21600
   Referrer-Policy: strict-origin-when-cross-origin
-  Timing-Allow-Origin: *
   X-Content-Type-Options: nosniff
   X-Robots-Tag: noindex
 
-/data/*
+/builds.json
   Access-Control-Allow-Origin: *
   Referrer-Policy: strict-origin-when-cross-origin
-  Timing-Allow-Origin: *
+  Cache-Control: public, max-age=21600, stale-while-revalidate=21600
+  X-Content-Type-Options: nosniff
+  X-Robots-Tag: noindex
 
+# .json files are precompressed
 /data/*.json
-  Cache-Control: public, max-age=31536000, immutable, no-transform
   Content-Encoding: br
   Content-Type: application/json
   Vary: Accept-Encoding
+
+/data/v*.json
+  Cache-Control: public, max-age=2592000, immutable, no-transform
+
+/data/20*.json
+  Cache-Control: public, max-age=2592000, immutable, no-transform
 
 # 6 Hours
 /data/nightly/*
   Cache-Control: public, max-age=21600, no-transform
 
-
-# 30 days
+# 1 day
 /data/stable/*
-  Cache-Control: public, max-age=2592000, no-transform
-
-
-/data/*.webp
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=86400, no-transform
