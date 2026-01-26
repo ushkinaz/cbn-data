@@ -17,6 +17,15 @@
   Content-Type: application/json
   Vary: Accept-Encoding
 
+# 6 Hours
+/data/nightly/*
+  Cache-Control: public, max-age=21600, no-transform
+
+
+# 30 days
+/data/stable/*
+  Cache-Control: public, max-age=2592000, no-transform
+
 
 /data/*.webp
   Cache-Control: public, max-age=31536000, immutable
