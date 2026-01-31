@@ -12,8 +12,8 @@
     />
 
 <script type="module">
-import init, * as bindings from 'cbn-tui-d52f31740f8c739a.js';
-const wasm = await init({ module_or_path: 'cbn-tui-d52f31740f8c739a_bg.wasm' });
+import init, * as bindings from './cbn-tui-d52f31740f8c739a.js';
+const wasm = await init({ module_or_path: './cbn-tui-d52f31740f8c739a_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -46,7 +46,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         margin: 0;
       }
     </style>
-  <link rel="modulepreload" href="cbn-tui-d52f31740f8c739a.js" crossorigin="anonymous" integrity="sha384-ycZFlKPyHUG8SAKo0B5nyGMJUio71qvVUDZLHtxv/9j3qf5//WnZhoPp4Dzj1ZNf"><link rel="preload" href="cbn-tui-d52f31740f8c739a_bg.wasm" crossorigin="anonymous" integrity="sha384-BFMJBxMxIotG0kA1WbrSeQx41Hv4ONuLhikOghW83kNJIl1hmxz5lAIAfq/dRLix" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="./cbn-tui-d52f31740f8c739a.js" crossorigin="anonymous" integrity="sha384-ycZFlKPyHUG8SAKo0B5nyGMJUio71qvVUDZLHtxv/9j3qf5//WnZhoPp4Dzj1ZNf"><link rel="preload" href="./cbn-tui-d52f31740f8c739a_bg.wasm" crossorigin="anonymous" integrity="sha384-BFMJBxMxIotG0kA1WbrSeQx41Hv4ONuLhikOghW83kNJIl1hmxz5lAIAfq/dRLix" as="fetch" type="application/wasm"></head>
   <body>
     <script type="module">
       window.addEventListener("TrunkApplicationStarted", (_) => {
