@@ -10,9 +10,9 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/fira_code.min.css"
     />
-    
+
 <script type="module">
-import init, * as bindings from '/cbn-tui-bcf2567781ea7f92.js';
+import init, * as bindings from 'cbn-tui-bcf2567781ea7f92.js';
 const wasm = await init({ module_or_path: '/cbn-tui-bcf2567781ea7f92_bg.wasm' });
 
 
@@ -46,7 +46,9 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         margin: 0;
       }
     </style>
-  <link rel="modulepreload" href="/cbn-tui-bcf2567781ea7f92.js" crossorigin="anonymous" integrity="sha384-n7rdzjUA4a1E0PqNxFXfNO3+kNsu1S9NYWnIPl94ZaJlNsf4QeLYrpgJW3rjSK+e"><link rel="preload" href="/cbn-tui-bcf2567781ea7f92_bg.wasm" crossorigin="anonymous" integrity="sha384-YnYNXxCA3plfWMIOEsis1SKcOPg5DqfLnc/zYTD0NDVJiT7iXD+JIptyS20IIhZJ" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="cbn-tui-bcf2567781ea7f92.js" crossorigin="anonymous" integrity="sha384-n7rdzjUA4a1E0PqNxFXfNO3+kNsu1S9NYWnIPl94ZaJlNsf4QeLYrpgJW3rjSK+e">
+  <link rel="preload" href="cbn-tui-bcf2567781ea7f92_bg.wasm" crossorigin="anonymous" integrity="sha384-YnYNXxCA3plfWMIOEsis1SKcOPg5DqfLnc/zYTD0NDVJiT7iXD+JIptyS20IIhZJ" as="fetch" type="application/wasm">
+  </head>
   <body>
     <script type="module">
       window.addEventListener("TrunkApplicationStarted", (_) => {
@@ -57,8 +59,8 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 (function () {
 
-    const address = '{{__TRUNK_ADDRESS__}}';
-    const base = '{{__TRUNK_WS_BASE__}}';
+    const address = 'https://data.cataclysmbn-guide.com';
+    const base = '/tui/';
     let protocol = '';
     protocol =
         protocol
