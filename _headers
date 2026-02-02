@@ -1,3 +1,11 @@
+# If a path matches more than one rule, and headers are defined in multiple rules, multiple headers are added.
+# That means we have to make sure that only one Cache-Control is applied ever - usually in the most specific rule.
+
+/data/*.webp
+  Access-Control-Allow-Origin: *
+  X-Content-Type-Options: nosniff
+  X-Robots-Tag: noindex
+
 /data/*.json
   Access-Control-Allow-Origin: *
   Referrer-Policy: strict-origin-when-cross-origin
