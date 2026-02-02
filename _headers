@@ -15,7 +15,7 @@
 /builds.json
   Access-Control-Allow-Origin: *
   Referrer-Policy: strict-origin-when-cross-origin
-  Cache-Control: public, max-age=21600, stale-while-revalidate=21600
+  Cache-Control: public, max-age=10800, stale-while-revalidate=10800
   X-Content-Type-Options: nosniff
   X-Robots-Tag: noindex
 
@@ -31,9 +31,9 @@
 /data/20*.json
   Cache-Control: public, max-age=2592000, immutable, no-transform
 
-# 6 Hours
+# 3 Hours
 /data/nightly/*
-  Cache-Control: public, max-age=21600, no-transform
+  Cache-Control: public, max-age=10800, no-transform
 
 # 1 day
 /data/stable/*
