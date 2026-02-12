@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+
+<script type="module">
+import init, * as bindings from './cbn-tui-f321e58413d7087a.js';
+const wasm = await init({ module_or_path: './cbn-tui-f321e58413d7087a_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+
+    <title>cbn-tui</title>
+    <style>
+      @font-face {
+        font-family: "3270 Nerd Font";
+        src: url("./3270NerdFontMono-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      :root {
+      }
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        align-content: center;
+        background-color: #282a36;
+      }
+      pre {
+        font-family: "3270 Nerd Font", monospace;
+        margin: 0;
+      }
+      #cbn-kb {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        border: 0;
+        padding: 0;
+        outline: none;
+        background: transparent;
+      }
+    </style>
+  <link rel="modulepreload" href="./cbn-tui-f321e58413d7087a.js" crossorigin="anonymous" integrity="sha384-o865pvfOZde01LdF9SMrdIFy7cDAsF2JnilOgq4LXCsaTGlcyf0yR/iBA8ATKcJF"><link rel="preload" href="./cbn-tui-f321e58413d7087a_bg.wasm" crossorigin="anonymous" integrity="sha384-As3Yw0p0XHXOYiFJ8VBSRBwmO5TOA+2USJw2Llib4jXctmLNlxEx66udNjb60DTC" as="fetch" type="application/wasm"></head>
+  <body>
+    <input
+      id="cbn-kb"
+      type="text"
+      inputmode="text"
+      autocomplete="off"
+      autocapitalize="none"
+      spellcheck="false"
+    />
+    <script type="module">
+      const kb = document.getElementById("cbn-kb");
+      const focusKb = () => {
+        if (document.activeElement !== kb) {
+          kb.focus({ preventScroll: true });
+        }
+      };
+      document.addEventListener("touchstart", focusKb, { passive: true });
+      document.addEventListener("mousedown", focusKb, { passive: true });
+      window.addEventListener("TrunkApplicationStarted", (_) => {
+        console.log("cbn-tui web initialized");
+      });
+    </script>
+  </body>
+</html>
