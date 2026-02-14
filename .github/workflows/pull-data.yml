@@ -108,6 +108,33 @@ jobs:
                 done
               fi
             done
+
+            # Iterate over data/DATE/mods/MOD_ID directories
+            if [ -d "${build_dir}mods" ]; then
+              echo "  📦 Processing mod graphics in $build_name"
+              for mod_dir in "${build_dir}mods"/*/; do
+                if [ ! -d "$mod_dir" ]; then continue; fi
+                mod_name=$(basename "$mod_dir")
+                
+                # Find all PNG files in mod directory
+                mapfile -t mod_png_files < <(find "$mod_dir" -type f -name "*.png")
+                mod_png_count=${#mod_png_files[@]}
+                
+                if [ "$mod_png_count" -gt 0 ]; then
+                  echo "    🎨 Processing mod $mod_name ($mod_png_count PNGs)"
+                  for png_file in "${mod_png_files[@]}"; do
+                    webp_file="${png_file%.png}.webp"
+                    if cwebp -preset icon "$png_file" -o "$webp_file" >/dev/null 2>&1; then
+                      rm "$png_file"
+                      build_converted=$((build_converted + 1))
+                    else
+                      echo "      ⚠️  Failed to convert: $(basename "$png_file")"
+                      build_failed=$((build_failed + 1))
+                    fi
+                  done
+                fi
+              done
+            fi
             
             if [ "$build_converted" -gt 0 ]; then
               echo "  ✅ Converted $build_converted files from $build_name"

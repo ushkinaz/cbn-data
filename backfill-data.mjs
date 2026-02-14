@@ -79,6 +79,21 @@ function exec(cmd, options = {}) {
 }
 
 /**
+ * Check if a file is already compressed using the 'file' utility
+ * @param {string} filePath
+ */
+function isCompressed(filePath) {
+    if (!fs.existsSync(filePath)) return false;
+    try {
+        // Use brotli -t to test if the file is a valid Brotli stream
+        execSync(`brotli -t "${filePath}"`, { stdio: "ignore" });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
  * Strip 'gfx/' prefix from file path
  * @param {string} filePath
  */
@@ -117,14 +132,23 @@ function getExistingBuilds(workspaceDir) {
  * @param {string} buildTag
  */
 function hasGfxFiles(workspaceDir, buildTag) {
-    const gfxDir = path.join(workspaceDir, "data", buildTag, "gfx");
-    if (!fs.existsSync(gfxDir)) {
-        return false;
-    }
+  const gfxDir = path.join(workspaceDir, "data", buildTag, "gfx");
+  const modsDir = path.join(workspaceDir, "data", buildTag, "mods");
 
-    // Check if directory has any files (recursively)
-    const files = exec(`find "${gfxDir}" -type f`, { silent: true, ignoreError: true });
-    return files && files.trim().length > 0;
+  // Consider a build complete only when both base gfx and mod assets exist.
+  const gfxFiles = exec(`find "${gfxDir}" -type f 2>/dev/null`, {
+    silent: true,
+    ignoreError: true,
+  });
+  const hasBaseGfx = !!(gfxFiles && gfxFiles.trim().length > 0);
+
+  const modFiles = exec(`find "${modsDir}" -type f 2>/dev/null`, {
+    silent: true,
+    ignoreError: true,
+  });
+  const hasModAssets = !!(modFiles && modFiles.trim().length > 0);
+
+  return hasBaseGfx && hasModAssets;
 }
 
 /**
@@ -133,30 +157,20 @@ function hasGfxFiles(workspaceDir, buildTag) {
  * @param {string} buildTag
  */
 function hasCompressedJson(workspaceDir, buildTag) {
-    const buildDir = path.join(workspaceDir, "data", buildTag);
-    if (!fs.existsSync(buildDir)) {
-        return false;
-    }
+  const buildDir = path.join(workspaceDir, "data", buildTag);
+  if (!fs.existsSync(buildDir)) {
+    return false;
+  }
 
-    // Check for .compressed marker file (new strategy)
-    const markerPath = path.join(buildDir, ".compressed");
-    if (fs.existsSync(markerPath)) {
-        return true;
-    }
+  // Check for .compressed marker file (new strategy)
+  const markerPath = path.join(buildDir, ".compressed");
+  if (fs.existsSync(markerPath)) {
+    return true;
+  }
 
-    // Fallback: Use brotli -t to check if JSON files are compressed
-    const allJsonPath = path.join(buildDir, "all.json");
-    if (!fs.existsSync(allJsonPath)) {
-        return false;
-    }
-
-    try {
-        // Use brotli -t to test if the file is a valid Brotli stream
-        execSync(`brotli -t "${allJsonPath}"`, { stdio: "ignore" });
-        return true;
-    } catch (error) {
-        return false;
-    }
+  // Fallback: Use isCompressed check on all.json
+  const allJsonPath = path.join(buildDir, "all.json");
+  return isCompressed(allJsonPath);
 }
 
 
@@ -218,67 +232,126 @@ async function downloadAndExtractGfx(github, buildTag, targetDir, dryRun) {
     }
 
     try {
-        const { data: zip } = await github.rest.repos.downloadZipballArchive({
-            owner: "cataclysmbn",
-            repo: "Cataclysm-BN",
-            ref: buildTag,
-        });
+      const { data: zip } = await github.rest.repos.downloadZipballArchive({
+        owner: "cataclysmbn",
+        repo: "Cataclysm-BN",
+        ref: buildTag,
+      });
 
-        // @ts-ignore
-        const zipBuffer = Buffer.from(zip);
-        const globFn = createGlobFn(zipBuffer);
+      // @ts-ignore
+      const zipBuffer = Buffer.from(zip);
+      const globFn = createGlobFn(zipBuffer);
 
-        let extracted = 0;
-        let converted = 0;
-        let failed = 0;
+      let extracted = 0;
+      let converted = 0;
+      let failed = 0;
 
-        // Extract GFX files
-        const gfxEntries = [...globFn("*/gfx/**/*")];
+      // Extract GFX files
+      const gfxEntries = [...globFn("*/gfx/**/*")];
 
-        if (gfxEntries.length === 0) {
-            console.log(`  ⚠️  No GFX files found in release`);
-            return { extracted: 0, converted: 0, failed: 0 };
-        }
-
-        console.log(`  📦 Extracting ${gfxEntries.length} GFX files...`);
-
-        for (const entry of gfxEntries) {
-            const relPath = stripGfxPrefix(entry.name);
-            const isPng = relPath.toLowerCase().endsWith(".png");
-
-            if (isPng) {
-                // Write PNG temporarily, then convert to WebP
-                const tempPngPath = path.join(targetDir, "gfx", relPath);
-                writeFile(targetDir, `gfx/${relPath}`, entry.raw());
-                extracted++;
-
-                if (convertToWebp(tempPngPath, false)) {
-                    converted++;
-                } else {
-                    failed++;
-                }
-            } else {
-                // Non-PNG files (like JSON tileset configs) - minify JSON files to reduce size
-                const isJson = relPath.toLowerCase().endsWith(".json");
-                if (isJson) {
-                    const jsonContent = JSON.stringify(JSON.parse(entry.raw().toString("utf8")));
-                    writeFile(targetDir, `gfx/${relPath}`, Buffer.from(jsonContent, "utf8"));
-                } else {
-                    writeFile(targetDir, `gfx/${relPath}`, entry.raw());
-                }
-                extracted++;
-            }
-        }
-
-        console.log(`  ✅ Extracted ${extracted} files, converted ${converted} PNGs to WebP`);
-        if (failed > 0) {
-            console.log(`  ⚠️  Failed to convert ${failed} PNGs`);
-        }
-
-        return { extracted, converted, failed };
-    } catch (error) {
-        console.error(`  ❌ Error downloading/extracting: ${error.message}`);
+      if (gfxEntries.length === 0) {
+        console.log(`  ⚠️  No GFX files found in release`);
         return { extracted: 0, converted: 0, failed: 0 };
+      }
+
+      console.log(`  📦 Extracting ${gfxEntries.length} GFX files...`);
+
+      for (const entry of gfxEntries) {
+        const relPath = stripGfxPrefix(entry.name);
+        const isPng = relPath.toLowerCase().endsWith(".png");
+
+        if (isPng) {
+          // Write PNG temporarily, then convert to WebP
+          const tempPngPath = path.join(targetDir, "gfx", relPath);
+          writeFile(targetDir, `gfx/${relPath}`, entry.raw());
+          extracted++;
+
+          if (convertToWebp(tempPngPath, false)) {
+            converted++;
+          } else {
+            failed++;
+          }
+        } else {
+          // Non-PNG files (like JSON tileset configs) - minify JSON files to reduce size
+          const isJson = relPath.toLowerCase().endsWith(".json");
+          if (isJson) {
+            const jsonContent = JSON.stringify(
+              JSON.parse(entry.raw().toString("utf8")),
+            );
+            writeFile(
+              targetDir,
+              `gfx/${relPath}`,
+              Buffer.from(jsonContent, "utf8"),
+            );
+          } else {
+            writeFile(targetDir, `gfx/${relPath}`, entry.raw());
+          }
+          extracted++;
+        }
+      }
+
+      // Extract GFX files from mods
+      const modEntries = [...globFn("*/data/mods/**/*")];
+      if (modEntries.length > 0) {
+        console.log(
+          `  📦 Searching for mod assets in ${modEntries.length} files...`,
+        );
+
+        // First pass: Resolve modId from modinfo.json
+        const modNameToId = {};
+        for (const entry of modEntries) {
+          if (entry.name.endsWith("modinfo.json")) {
+            try {
+              const modInfo = JSON.parse(entry.raw().toString("utf8")).find(
+                (i) => i.type === "MOD_INFO",
+              );
+              if (modInfo && !modInfo.obsolete) {
+                const modname = entry.name.split("/")[2];
+                /** @type {any} */ (modNameToId)[modname] = modInfo.id;
+              }
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+        }
+
+        // Second pass: Extract PNGs
+        for (const entry of modEntries) {
+          const parts = entry.name.split("/");
+          const modName = parts[2];
+          const modId = /** @type {any} */ (modNameToId)[modName];
+          if (!modId) continue;
+
+          const relPathInsideMod = parts.slice(3).join("/");
+          const isPng = relPathInsideMod.toLowerCase().endsWith(".png");
+
+          if (isPng) {
+            const targetPath = `mods/${modId}/${relPathInsideMod}`;
+            const tempPngPath = path.join(targetDir, targetPath);
+            writeFile(targetDir, targetPath, entry.raw());
+            extracted++;
+
+            if (convertToWebp(tempPngPath, false)) {
+              converted++;
+            } else {
+              failed++;
+            }
+          }
+        }
+      }
+
+      console.log(
+        `  ✅ Extracted ${extracted} files, converted ${converted} PNGs to WebP`,
+      );
+      if (failed > 0) {
+        console.log(`  ⚠️  Failed to convert ${failed} PNGs`);
+      }
+
+      return { extracted, converted, failed };
+    } catch (err) {
+      const error = /** @type {Error} */ (err);
+      console.error(`  ❌ Error downloading/extracting: ${error.message}`);
+      return { extracted: 0, converted: 0, failed: 0 };
     }
 }
 
@@ -451,25 +524,32 @@ async function migrate() {
             const jsonFiles = findResult.trim().split("\n").filter(f => f);
 
             for (const jsonFile of jsonFiles) {
-                jsonCount++;
+              jsonCount++;
 
-                // Brotli compression (quality 11 = maximum)
-                try {
-                    exec(`brotli -q 11 -k -f "${jsonFile}"`, { silent: true });
+              // Skip if already compressed
+              if (isCompressed(jsonFile)) {
+                continue;
+              }
 
-                    // Rename the compressed .br file to replace the original .json
-                    const brFile = `${jsonFile}.br`;
-                    if (fs.existsSync(brFile)) {
-                        fs.renameSync(brFile, jsonFile);
-                        compressedCount++;
-                    }
-                } catch (e) {
+              // Brotli compression (quality 11 = maximum)
+              try {
+                exec(`brotli -q 11 -k -f "${jsonFile}"`, { silent: true });
+
+                // Rename the compressed .br file to replace the original .json
+                const brFile = `${jsonFile}.br`;
+                if (fs.existsSync(brFile)) {
+                  fs.renameSync(brFile, jsonFile);
+                  compressedCount++;
+                }
+              } catch (e) {
                 // Ignore errors
-                }
+              }
 
-                if (jsonCount % 10 === 0) {
-                    process.stdout.write(`\r  📄 Processed ${jsonCount} JSON files...`);
-                }
+              if (jsonCount % 10 === 0) {
+                process.stdout.write(
+                  `\r  📄 Processed ${jsonCount} JSON files...`,
+                );
+              }
             }
 
             // After successfully compressing all JSON files in the build, create marker

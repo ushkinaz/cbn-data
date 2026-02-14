@@ -191,22 +191,37 @@ export default async function run({ github, context, dryRun = false }) {
         /** @type {Record<string, { info: any, data: any[] }>} */
         const dataMods = {};
         for (const i of globFn("*/data/mods/*/modinfo.json")) {
-            const modname = i.name.split("/")[2];
-            const modInfo = JSON.parse(i.data()).find((i) => i.type === "MOD_INFO");
-            if (!modInfo || modInfo.obsolete) {
-                continue;
+          const modname = i.name.split("/")[2];
+          const modInfo = JSON.parse(i.data()).find(
+            (i) => i.type === "MOD_INFO",
+          );
+          if (!modInfo || modInfo.obsolete) {
+            continue;
+          }
+          const modId = modInfo.id;
+          dataMods[modId] = { info: modInfo, data: [] };
+          for (const f of globFn(`*/data/mods/${modname}/**/*.json`)) {
+            const filename = f.name;
+            const objs = breakJSONIntoSingleObjects(f.data());
+            for (const { obj, start, end } of objs) {
+              if (obj.type === "MOD_INFO") continue;
+              obj.__filename = filename + `#L${start}-L${end}`;
+              dataMods[modId].data.push(obj);
             }
-            const modId = modInfo.id;
-            dataMods[modId] = { info: modInfo, data: [] };
-            for (const f of globFn(`*/data/mods/${modname}/**/*.json`)) {
-                const filename = f.name;
-                const objs = breakJSONIntoSingleObjects(f.data());
-                for (const { obj, start, end } of objs) {
-                    if (obj.type === "MOD_INFO") continue;
-                    obj.__filename = filename + `#L${start}-L${end}`;
-                    dataMods[modId].data.push(obj);
-                }
+          }
+
+          // Extract GFX/Assets from mods
+          for (const f of globFn(`*/data/mods/${modname}/**/*.png`)) {
+            // Skip if it's the modinfo.json we already processed above, or if it's already in the data list
+            if (f.name.endsWith("modinfo.json")) continue;
+
+            if (!dryRun) {
+              const relPath = f.name.split("/").slice(3).join("/");
+              const targetPath = `${pathBase}/mods/${modId}/${relPath}`;
+
+              writeFile(workspaceDir, targetPath, f.raw());
             }
+          }
         }
         console.log(
             `Found ${Object.values(dataMods).reduce((acc, m) => acc + m.data.length, 0)} objects in ${Object.keys(dataMods).length} mods.`,
