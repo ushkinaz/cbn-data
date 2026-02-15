@@ -33,12 +33,22 @@
  *   git push origin main
  */
 
-import AdmZip from "adm-zip";
-import minimatch from "minimatch";
+import po2json from "po2json";
 import { Octokit } from "octokit";
-import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
+import {
+  exec,
+  breakJSONIntoSingleObjects,
+  postprocessPoJson,
+  createGlobFn,
+  writeFile,
+  getExistingBuilds,
+  stripGfxPrefix,
+  isCompressed,
+  convertToWebp,
+} from "./utils.mjs";
+import { toPinyin } from "./pinyin.mjs";
 
 const DEFAULT_BRANCH = "main";
 const DEFAULT_WORKSPACE = "data_workspace";
@@ -58,120 +68,20 @@ function parseArgs() {
 }
 
 /**
- * Execute a shell command
- * @param {string} cmd
- * @param {object} options
- */
-function exec(cmd, options = {}) {
-    try {
-        const result = execSync(cmd, {
-            encoding: "utf8",
-            stdio: options.silent ? "pipe" : "inherit",
-            ...options,
-        });
-        return result;
-    } catch (error) {
-        if (!options.ignoreError) {
-            throw error;
-        }
-        return null;
-    }
-}
-
-/**
- * Ported from pull-data.mjs: breaks a large JSON string into single objects
- * and adds __filename with line numbers.
- * @param {string} str
- */
-function breakJSONIntoSingleObjects(str) {
-    const objs = [];
-    let depth = 0;
-    let line = 1;
-    let start = -1;
-    let startLine = -1;
-    let inString = false;
-    let inStringEscSequence = false;
-    for (let i = 0; i < str.length; i++) {
-        const c = str[i];
-        if (inString) {
-            if (inStringEscSequence) {
-                inStringEscSequence = false;
-            } else {
-                if (c === "\\") inStringEscSequence = true;
-                else if (c === '"') inString = false;
-            }
-        } else {
-            if (c === "{") {
-                if (depth === 0) {
-                    start = i;
-                    startLine = line;
-                }
-                depth++;
-            } else if (c === "}") {
-                depth--;
-                if (depth === 0) {
-                    objs.push({
-                        obj: JSON.parse(str.slice(start, i + 1)),
-                        start: startLine,
-                        end: line,
-                    });
-                }
-            } else if (c === '"') {
-                inString = true;
-            } else if (c === "\n") {
-                line++;
-            }
-        }
-    }
-    return objs;
-}
-
-/**
- * Check if a file is already compressed using the 'file' utility
- * @param {string} filePath
- */
-function isCompressed(filePath) {
-    if (!fs.existsSync(filePath)) return false;
-    try {
-        // Use brotli -t to test if the file is a valid Brotli stream
-        execSync(`brotli -t "${filePath}"`, { stdio: "ignore" });
-        return true;
-    } catch (e) {
-        return false;
-    }
-}
-
-/**
- * Strip 'gfx/' prefix from file path
- * @param {string} filePath
- */
-function stripGfxPrefix(filePath) {
-    return filePath.startsWith("gfx/") ? filePath.slice(4) : filePath;
-}
-
-/**
- * Write file to disk, creating parent directories as needed
- * @param {string} baseDir
- * @param {string} relativePath
- * @param {Buffer} content
- */
-function writeFile(baseDir, relativePath, content) {
-    const fullPath = path.join(baseDir, relativePath);
-    const dir = path.dirname(fullPath);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(fullPath, content);
-}
-
-/**
- * Get existing builds from builds.json
+ * Check if a build has translation files
  * @param {string} workspaceDir
+ * @param {string} buildTag
  */
-function getExistingBuilds(workspaceDir) {
-    const buildsPath = path.join(workspaceDir, "builds.json");
-    if (fs.existsSync(buildsPath)) {
-        return JSON.parse(fs.readFileSync(buildsPath, "utf8"));
-    }
-    return [];
+function hasLangs(workspaceDir, buildTag) {
+  const langDir = path.join(workspaceDir, "data", buildTag, "lang");
+  const langFiles = exec(
+    `find "${langDir}" -type f -name "*.json" 2>/dev/null`,
+    {
+      silent: true,
+      ignoreError: true,
+    },
+  );
+  return !!(langFiles && String(langFiles).trim().length > 0);
 }
 
 /**
@@ -188,13 +98,13 @@ function hasGfxFiles(workspaceDir, buildTag) {
     silent: true,
     ignoreError: true,
   });
-  const hasBaseGfx = !!(gfxFiles && gfxFiles.trim().length > 0);
+  const hasBaseGfx = !!(gfxFiles && String(gfxFiles).trim().length > 0);
 
   const modFiles = exec(`find "${modsDir}" -type f 2>/dev/null`, {
     silent: true,
     ignoreError: true,
   });
-  const hasModAssets = !!(modFiles && modFiles.trim().length > 0);
+  const hasModAssets = !!(modFiles && String(modFiles).trim().length > 0);
 
   return hasBaseGfx && hasModAssets;
 }
@@ -227,7 +137,9 @@ function hasCompressedJson(workspaceDir, buildTag) {
  * @param {string} buildTag
  */
 function hasAllModsJson(workspaceDir, buildTag) {
-  return fs.existsSync(path.join(workspaceDir, "data", buildTag, "all_mods.json"));
+  return fs.existsSync(
+    path.join(workspaceDir, "data", buildTag, "all_mods.json"),
+  );
 }
 
 /**
@@ -239,57 +151,8 @@ function hasAllJson(workspaceDir, buildTag) {
   return fs.existsSync(path.join(workspaceDir, "data", buildTag, "all.json"));
 }
 
-
 /**
- * Create glob function for zip file
- * @param {Buffer} zipBuffer
- */
-function createGlobFn(zipBuffer) {
-    const z = new AdmZip(zipBuffer);
-    return function* glob(pattern) {
-        for (const f of z.getEntries()) {
-            if (f.isDirectory) continue;
-            if (minimatch(f.entryName, pattern)) {
-                yield {
-                    name: f.entryName.replaceAll("\\", "/").split("/").slice(1).join("/"),
-                    data: () => f.getData().toString("utf8"),
-                    raw: () => f.getData(),
-                };
-            }
-        }
-    };
-}
-
-/**
- * Convert PNG to WebP
- * @param {string} pngPath
- * @param {boolean} dryRun
- * @param {boolean} [force]
- * @returns {boolean} success
- */
-function convertToWebp(pngPath, dryRun, force = false) {
-  const webpPath = pngPath.replace(/\.png$/, ".webp");
-
-  if (fs.existsSync(webpPath) && !force) {
-    return true;
-  }
-
-  if (dryRun) {
-    return true;
-  }
-
-  try {
-    exec(`cwebp -preset icon "${pngPath}" -o "${webpPath}"`, { silent: true });
-    fs.unlinkSync(pngPath);
-    return true;
-  } catch (error) {
-    console.error(`    ⚠️  Failed to convert: ${path.basename(pngPath)}`);
-    return false;
-  }
-}
-
-/**
- * Download and extract GFX and/or Data JSONs for a build
+ * Download and extract GFX, Data JSONs, and Translations for a build
  * @param {Octokit} github
  * @param {string} buildTag
  * @param {string} targetDir
@@ -297,6 +160,7 @@ function convertToWebp(pngPath, dryRun, force = false) {
  * @param {object} options
  * @param {boolean} [options.needsGfx]
  * @param {boolean} [options.needsJson]
+ * @param {boolean} [options.needsLangs]
  * @param {boolean} [options.force]
  */
 async function downloadAndExtractData(
@@ -306,22 +170,29 @@ async function downloadAndExtractData(
   dryRun,
   options,
 ) {
-  const { needsGfx = true, needsJson = true, force = false } = options;
+  const {
+    needsGfx = true,
+    needsJson = true,
+    needsLangs = true,
+    force = false,
+  } = options;
+  const needs = [];
+  if (needsJson) needs.push("Data");
+  if (needsGfx) needs.push("GFX");
+  if (needsLangs) needs.push("Langs");
+
   console.log(
-    `  📥 Downloading zipball for ${buildTag}${needsJson ? " (extracting Data + GFX)" : ""}...`,
+    `  📥 Downloading zipball for ${buildTag} (extracting ${needs.join(" + ") || "nothing"})...`,
   );
 
   if (dryRun) {
-    console.log(
-      `  [DRY RUN] Would download and extract ${needsJson ? "Data and " : ""}GFX`,
-    );
+    console.log(`  [DRY RUN] Would download and extract ${needs.join(" + ")}`);
     return { extracted: 0, converted: 0, failed: 0, generatedJsonFiles: 0 };
   }
 
   try {
-    // If we need JSON, we also need the release object to populate all.json
     let release = null;
-    if (needsJson) {
+    if (needsJson || needsLangs) {
       const { data: rel } = await github.rest.repos.getReleaseByTag({
         owner: "cataclysmbn",
         repo: "Cataclysm-BN",
@@ -336,150 +207,129 @@ async function downloadAndExtractData(
       ref: buildTag,
     });
 
-    // @ts-ignore
-    const zipBuffer = Buffer.from(zip);
-    const globFn = createGlobFn(zipBuffer);
+    const globFn = createGlobFn(Buffer.from(/** @type {any} */ (zip)));
 
     let extracted = 0;
     let converted = 0;
     let failed = 0;
-
-    // Extract Data JSON if needed (all.json)
+    const needsNameData = needsJson || needsLangs;
     const data = [];
-    if (needsJson) {
-      console.log(`  📦 Collating base JSON...`);
-      for (const f of globFn("*/data/json/**/*.json")) {
-        const filename = f.name;
-        const objs = breakJSONIntoSingleObjects(f.data());
+    /** @type {Record<string, { info: any, data: any[] }>} */
+    const dataMods = {};
+    /** @type {Record<string, string>} */
+    const modNameToId = {};
+
+    // Single pass to identify mod IDs
+    for (const entry of globFn("*/data/mods/*/modinfo.json")) {
+      try {
+        const modInfo = JSON.parse(entry.data()).find(
+          (/** @type {any} */ i) => i.type === "MOD_INFO",
+        );
+        if (modInfo && !modInfo.obsolete) {
+          const modNameFromPath = entry.name.split("/")[2];
+          modNameToId[modNameFromPath] = modInfo.id;
+          if (needsJson) {
+            dataMods[modInfo.id] = { info: modInfo, data: [] };
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    // Process all entries in one go
+    for (const entry of globFn("*/**/*")) {
+      const { name } = entry;
+      const parts = name.split("/");
+
+      // 1. Base JSON
+      if (needsNameData && name.startsWith("data/json/") && name.endsWith(".json")) {
+        const objs = breakJSONIntoSingleObjects(entry.data());
         for (const { obj, start, end } of objs) {
-          obj.__filename = filename + `#L${start}-L${end}`;
+          obj.__filename = name + `#L${start}-L${end}`;
           data.push(obj);
         }
       }
-      console.log(`    Found ${data.length} objects.`);
-    }
 
-    // Extract GFX files (always if requested, but logic below handles it per entry)
-    const gfxEntries = needsGfx ? [...globFn("*/gfx/**/*")] : [];
-
-    if (needsGfx && gfxEntries.length === 0) {
-      console.log(`  ⚠️  No GFX files found in release`);
-    }
-
-    if (gfxEntries.length > 0) {
-      console.log(`  📦 Extracting ${gfxEntries.length} GFX files...`);
-
-      for (const entry of gfxEntries) {
-        const relPath = stripGfxPrefix(entry.name);
-        const isPng = relPath.toLowerCase().endsWith(".png");
-
-        if (isPng) {
-          // Write PNG temporarily, then convert to WebP
-          const targetRelPath = `gfx/${relPath}`;
-          const webpRelPath = targetRelPath.replace(/\.png$/, ".webp");
-          const webpPath = path.join(targetDir, webpRelPath);
-
-          if (fs.existsSync(webpPath) && !force) {
-            continue;
+      // 2. Base GFX
+      else if (needsGfx && name.startsWith("gfx/")) {
+        const relPath = stripGfxPrefix(name);
+        if (relPath.toLowerCase().endsWith(".png")) {
+          const targetPath = `gfx/${relPath}`;
+          const webpPath = path.join(
+            targetDir,
+            targetPath.replace(/\.png$/, ".webp"),
+          );
+          if (!fs.existsSync(webpPath) || force) {
+            writeFile(targetDir, targetPath, entry.raw());
+            extracted++;
+            if (convertToWebp(path.join(targetDir, targetPath), false, force))
+              converted++;
+            else failed++;
           }
-
-          const tempPngPath = path.join(targetDir, targetRelPath);
-          writeFile(targetDir, targetRelPath, entry.raw());
+        } else if (relPath.toLowerCase().endsWith(".json")) {
+          writeFile(
+            targetDir,
+            `gfx/${relPath}`,
+            Buffer.from(JSON.stringify(JSON.parse(entry.data())), "utf8"),
+          );
           extracted++;
-
-          if (convertToWebp(tempPngPath, false, force)) {
-            converted++;
-          } else {
-            failed++;
-          }
         } else {
-          // Non-PNG files (like JSON tileset configs) - minify JSON files to reduce size
-          const isJson = relPath.toLowerCase().endsWith(".json");
-          if (isJson) {
-            const jsonContent = JSON.stringify(
-              JSON.parse(entry.raw().toString("utf8")),
-            );
-            writeFile(
-              targetDir,
-              `gfx/${relPath}`,
-              Buffer.from(jsonContent, "utf8"),
-            );
-          } else {
-            writeFile(targetDir, `gfx/${relPath}`, entry.raw());
-          }
+          writeFile(targetDir, `gfx/${relPath}`, entry.raw());
           extracted++;
         }
       }
-    }
 
-    // Extract Mods (Data and/or GFX)
-    const modEntries = [...globFn("*/data/mods/**/*")];
-    /** @type {Record<string, { info: any, data: any[] }>} */
-    const dataMods = {};
-
-    if (modEntries.length > 0) {
-      console.log(
-        `  📦 Searching for mod ${needsJson ? "data and " : ""}assets in ${modEntries.length} files...`,
-      );
-
-      // First pass: Resolve modId from modinfo.json
-      const modNameToId = {};
-      for (const entry of modEntries) {
-        if (entry.name.endsWith("modinfo.json")) {
-          try {
-            const modInfo = JSON.parse(entry.data()).find(
-              (i) => i.type === "MOD_INFO",
-            );
-            if (modInfo && !modInfo.obsolete) {
-              const modname = entry.name.split("/")[2];
-              /** @type {any} */ (modNameToId)[modname] = modInfo.id;
-              if (needsJson) {
-                dataMods[modInfo.id] = { info: modInfo, data: [] };
-              }
-            }
-          } catch (e) {
-            // Ignore parse errors
-          }
+      // 3. Translations
+      else if (needsLangs && name.startsWith("lang/po/") && name.endsWith(".po")) {
+        const lang = path.basename(name, ".po");
+        // @ts-ignore
+        const json = postprocessPoJson(po2json.parse(entry.data()));
+        writeFile(targetDir, `lang/${lang}.json`, JSON.stringify(json));
+        if (lang.startsWith("zh_")) {
+          const pinyinMap = toPinyin(data, json);
+          writeFile(
+            targetDir,
+            `lang/${lang}_pinyin.json`,
+            JSON.stringify(pinyinMap),
+          );
+          extracted++;
         }
+        extracted++;
       }
 
-      // Second pass: Extract PNGs and JSON data
-      for (const entry of modEntries) {
-        const parts = entry.name.split("/");
+      // 4. Mods (Data + GFX)
+      else if (name.startsWith("data/mods/")) {
         const modName = parts[2];
-        const modId = /** @type {any} */ (modNameToId)[modName];
+        const modId = modNameToId[modName];
         if (!modId) continue;
 
         const relPathInsideMod = parts.slice(3).join("/");
-        const isPng = relPathInsideMod.toLowerCase().endsWith(".png");
-        const isJson =
-          relPathInsideMod.toLowerCase().endsWith(".json") &&
-          !entry.name.endsWith("modinfo.json");
+        if (!relPathInsideMod) continue;
 
-        if (needsGfx && isPng) {
-          const targetPath = `mods/${modId}/${relPathInsideMod}`;
-          const webpPath = path.join(targetDir, targetPath.replace(/\.png$/, ".webp"));
-
-          if (fs.existsSync(webpPath) && !force) {
-            continue;
-          }
-
-          const tempPngPath = path.join(targetDir, targetPath);
-          writeFile(targetDir, targetPath, entry.raw());
-          extracted++;
-
-          if (convertToWebp(tempPngPath, false, force)) {
-            converted++;
-          } else {
-            failed++;
-          }
-        } else if (needsJson && isJson) {
-          const filename = entry.name;
+        if (
+          needsJson &&
+          relPathInsideMod.endsWith(".json") &&
+          !relPathInsideMod.endsWith("modinfo.json")
+        ) {
           const objs = breakJSONIntoSingleObjects(entry.data());
           for (const { obj, start, end } of objs) {
             if (obj.type === "MOD_INFO") continue;
-            obj.__filename = filename + `#L${start}-L${end}`;
+            obj.__filename = name + `#L${start}-L${end}`;
             dataMods[modId].data.push(obj);
+          }
+        } else if (needsGfx && relPathInsideMod.endsWith(".png")) {
+          const targetPath = `mods/${modId}/${relPathInsideMod}`;
+          const webpPath = path.join(
+            targetDir,
+            targetPath.replace(/\.png$/, ".webp"),
+          );
+          if (!fs.existsSync(webpPath) || force) {
+            writeFile(targetDir, targetPath, entry.raw());
+            extracted++;
+            if (convertToWebp(path.join(targetDir, targetPath), false, force))
+              converted++;
+            else failed++;
           }
         }
       }
@@ -487,28 +337,32 @@ async function downloadAndExtractData(
 
     // Finalize JSON files
     if (needsJson) {
-      const allJson = JSON.stringify({
-        build_number: buildTag,
-        release,
-        data,
-        mods: Object.fromEntries(
-          Object.entries(dataMods).map(([name, mod]) => [name, mod.info]),
+      writeFile(
+        targetDir,
+        "all.json",
+        Buffer.from(
+          JSON.stringify({
+            build_number: buildTag,
+            release,
+            data,
+            mods: Object.fromEntries(
+              Object.entries(dataMods).map(([n, m]) => [n, m.info]),
+            ),
+          }),
+          "utf8",
         ),
-      });
-      const allModsJson = JSON.stringify(dataMods);
-
-      writeFile(targetDir, "all.json", Buffer.from(allJson, "utf8"));
-      writeFile(targetDir, "all_mods.json", Buffer.from(allModsJson, "utf8"));
+      );
+      writeFile(
+        targetDir,
+        "all_mods.json",
+        Buffer.from(JSON.stringify(dataMods), "utf8"),
+      );
       console.log(`  ✅ Generated all.json and all_mods.json`);
     }
 
     console.log(
-      `  ✅ Extracted ${extracted} files, converted ${converted} PNGs to WebP`,
+      `  ✅ Processed ${extracted} files, converted ${converted} PNGs`,
     );
-    if (failed > 0) {
-      console.log(`  ⚠️  Failed to convert ${failed} PNGs`);
-    }
-
     return {
       extracted,
       converted,
@@ -517,7 +371,7 @@ async function downloadAndExtractData(
     };
   } catch (err) {
     const error = /** @type {Error} */ (err);
-    console.error(`  ❌ Error downloading/extracting: ${error.message}`);
+    console.error(`  ❌ Error processing ${buildTag}: ${error.message}`);
     return { extracted: 0, converted: 0, failed: 0, generatedJsonFiles: 0 };
   }
 }
@@ -599,14 +453,18 @@ async function migrate() {
 
   // Filter builds missing GFX, all_mods.json, all.json, or compressed JSON (unless --force is used)
   let buildsToPprocess = builds
-    .filter((b) => !specificBuild || b.build_number === specificBuild)
     .filter(
-      (b) =>
+      (/** @type {any} */ b) =>
+        !specificBuild || b.build_number === specificBuild,
+    )
+    .filter(
+      (/** @type {any} */ b) =>
         force ||
         !hasGfxFiles(DEFAULT_WORKSPACE, b.build_number) ||
         !hasCompressedJson(DEFAULT_WORKSPACE, b.build_number) ||
         !hasAllModsJson(DEFAULT_WORKSPACE, b.build_number) ||
-        !hasAllJson(DEFAULT_WORKSPACE, b.build_number),
+        !hasAllJson(DEFAULT_WORKSPACE, b.build_number) ||
+        !hasLangs(DEFAULT_WORKSPACE, b.build_number),
     );
 
   if (buildsToPprocess.length === 0) {
@@ -646,14 +504,16 @@ async function migrate() {
       force ||
       !hasAllModsJson(DEFAULT_WORKSPACE, build.build_number) ||
       !hasAllJson(DEFAULT_WORKSPACE, build.build_number);
+    const needsLangs =
+      force || !hasLangs(DEFAULT_WORKSPACE, build.build_number);
 
-    if (needsGfx || needsJson) {
+    if (needsGfx || needsJson || needsLangs) {
       const stats = await downloadAndExtractData(
         github,
         build.build_number,
         targetDir,
         dryRun,
-        { needsGfx, needsJson, force },
+        { needsGfx, needsJson, needsLangs, force },
       );
 
       totalExtracted += stats.extracted;
@@ -727,7 +587,7 @@ async function migrate() {
 
       if (!findResult) continue;
 
-      const jsonFiles = findResult
+      const jsonFiles = String(findResult)
         .trim()
         .split("\n")
         .filter((f) => f);
