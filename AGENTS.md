@@ -26,7 +26,6 @@ Lint / Format:
 
 Tests:
 - Run all tests: `pnpm test`
-- Run a single test file: `node tests/test-retention.mjs`
 
 ## Common Commands
 
