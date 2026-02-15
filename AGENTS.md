@@ -13,7 +13,7 @@ Data branches are checked out to data_workspace/ in workflows. Do not commit gen
 ## Install
 
 ```
-yarn install --frozen-lockfile --ignore-engines
+pnpm install
 ```
 
 ## Build / Lint / Test
