@@ -22,7 +22,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout action branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: action
           fetch-depth: 1
@@ -34,12 +34,17 @@ jobs:
           fetch-depth: 1
           path: data_workspace
 
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '24.x'
-          cache: 'yarn'
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
 
-      - run: yarn install --frozen-lockfile --ignore-engines
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Fetch Dependencies
+        run: pnpm install
 
       - name: Pull game data
         uses: actions/github-script@v8
