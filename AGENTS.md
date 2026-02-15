@@ -76,13 +76,13 @@ Applies retention policy, removes old builds.
 Runs monthly. Creates backup branch before squashing history.
 
 ### `backfill-data.mjs`
-Backfills missing GFX + Brotli-compresses JSON for old builds.
+Backfills missing GFX + Brotli-compresses JSON for old builds, with per-step progress logs.
 
 **Independent processes:**
 - Downloads/converts GFX only if missing WebP
 - Brotli-compresses JSON only if not already compressed
 
-See script header (`node backfill-data.mjs`) for full documentation.
+See script header (`node backfill-data.mjs`) for full documentation. In parity with `pull-data.mjs` via shared logic in `pipeline.mjs`.
 
 ### `pinyin.mjs`
 Generates pinyin mappings for Chinese translations using the `pinyin` package.
@@ -145,16 +145,3 @@ instructs Cloudflare to serve them with `Content-Encoding: br`.
 ## Deployment
 
 Cloudflare Pages deploys directly from `main` branch.
-
-**Compression Strategy:**
-Cloudflare Pages cannot automatically serve `.br` files with proper encoding headers.
-Workaround: All JSON files are Brotli-compressed but saved as `.json` (without extension).
-The `_headers` file declares `Content-Encoding: br` for all `.json` files.
-
-This achieves ~90% smaller file sizes while maintaining compatibility.
-
-## Contributing
-
-Built for [The Hitchhiker's Guide to Cataclysm: Bright Nights](https://cataclysmbn-guide.com/).
-
-Questions? Check script headers or workflow comments.
