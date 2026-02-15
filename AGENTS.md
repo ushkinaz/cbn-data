@@ -1,70 +1,119 @@
 # Developer Guide
 
-Mirrors JSON, translation, and GFX data from Cataclysm: Bright Nights → [data.cataclysmbn-guide.com](https://data.cataclysmbn-guide.com/)
+Mirrors JSON, translation, and GFX data from Cataclysm: Bright Nights → https://data.cataclysmbn-guide.com/
 
 ## Repository Structure
 
-**Orphan branches:**
-- `action` - Scripts, workflows, config
-- `main`/`dev` - Generated data snapshots
+Orphan branches:
+- action: scripts, workflows, config
+- main/dev: generated data snapshots
 
-Data branches checked out to `data_workspace/` in workflows. Never commit generated data to `action`.
+Data branches are checked out to data_workspace/ in workflows. Do not commit generated data to the action branch.
 
 ## Install
 
-```bash
+```
 yarn install --frozen-lockfile --ignore-engines
 ```
 
+## Build / Lint / Test
+
+Build:
+- No build step (scripts run directly with Node.js).
+
+Lint / Format:
+- No lint or formatting tools are configured in this repo.
+
+Tests:
+- Run all tests: `yarn test`
+- Run a single test file: `node tests/test-retention.mjs`
+
 ## Common Commands
 
-```bash
-# Run tests
-yarn test
-```
-```bash
-# Pull data (dry-run)
-node pull-data-launcher.js
-```
-```bash
-# Pull data (live)
-GITHUB_TOKEN=xxx node pull-data-launcher.js
-```
-```bash
-# Prune data (dry-run)
-node prune-data-launcher.js
-```
-```bash
-# Prune data (live)
-GITHUB_TOKEN=xxx node prune-data-launcher.js
-```
-```bash
-# Backfill data (see script header for full docs)
-GITHUB_TOKEN=xxx node backfill-data.mjs --dry-run
-GITHUB_TOKEN=xxx node backfill-data.mjs
-```
+- Pull data (dry-run): `node pull-data-launcher.js`
+- Pull data (live): `GITHUB_TOKEN=xxx node pull-data-launcher.js`
+- Postprocess assets (CI parity): `node postprocess-data.mjs --workspace=data_workspace`
+- Postprocess assets (dry-run): `node postprocess-data.mjs --workspace=data_workspace --dry-run`
+- Backfill data (see script header for full docs):
+  - `GITHUB_TOKEN=xxx node backfill-data.mjs --dry-run`
+  - `GITHUB_TOKEN=xxx node backfill-data.mjs`
+- Prune data (dry-run): `node prune-data-launcher.js`
+- Prune data (live): `GITHUB_TOKEN=xxx node prune-data-launcher.js`
+
+## Code Style
+
+Language/runtime:
+- ES modules (`type: "module"` in package.json).
+- Use `// @ts-check` at file top for JS with JSDoc types.
+
+Imports:
+- Use named imports from `./pipeline.mjs` for shared worker functions.
+- Keep imports ordered: external first, then internal.
+
+Formatting:
+- Double quotes for strings.
+- Semicolons required.
+- Two-space indentation.
+
+Types / JSDoc:
+- Prefer JSDoc for function params/returns and local type hints.
+- Use `/** @type {...} */` for inline type assertions.
+
+Naming:
+- camelCase for variables/functions.
+- UPPER_SNAKE for constants.
+- Descriptive names for pipeline workers and steps.
+
+Error handling:
+- Use try/catch for external calls (GitHub API, filesystem, exec).
+- Log concise errors, avoid swallowing failures silently unless explicitly safe.
+- For retry logic, see existing patterns (if reintroduced).
+
+Logging:
+- Use per-step progress logs for long-running steps.
+- Keep logs grouped per build (`console.group` / `console.groupEnd`).
+
+Pipeline conventions:
+- `pipeline.mjs` is a set of dumb worker utilities (no decisions).
+- `backfill-data.mjs` owns decision-making and conditional execution.
+- `pull-data.mjs` runs unconditional steps for new releases.
+
+Compression:
+- `.json` files are Brotli-compressed and served with `Content-Encoding: br`.
+- Use `.compressed` marker to skip rework.
 
 ## Key Scripts
 
-### `pull-data.mjs`
+### pull-data.mjs
 Ingests upstream releases → writes data snapshots.
 
-**Does:**
+Does:
 - Downloads zipballs from cataclysmbn/Cataclysm-BN
 - Extracts JSON (`all.json`), mods (`all_mods.json`), translations (`lang/*.json`)
-- For Chinese: generates pinyin variants
-- Extracts GFX assets
-- Writes to filesystem (workflow handles WebP conversion + Brotli compression)
+- Generates pinyin variants for Chinese
+- Extracts base/mod/external tileset assets
 
-**Doesn't:**
-- Commit (workflow does this)
-- Convert GFX (workflow does PNG→WebP)
-- Compress JSON (workflow does Brotli compression)
+Does not:
+- Convert PNG→WebP (handled in postprocess step)
+- Compress JSON (handled in postprocess step)
 
-### `prune-data.mjs`
-Applies retention policy, removes old builds.
+### postprocess-data.mjs
+Postprocesses data workspace to align with CI:
+- Converts PNG→WebP for base gfx and mod assets
+- Brotli-compresses `.json` files and writes `.compressed`
+- Designed to be deterministic and reusable in CI and manual runs
 
-**Retention rules:**
+### backfill-data.mjs
+Backfills missing GFX + Brotli-compresses JSON for old builds.
+
+Notes:
+- Decision-making happens here.
+- Uses pipeline workers and per-step progress logs.
+
+### prune-data.mjs
+Applies retention policy and removes old builds.
+
+Retention rules:
 - Keep all stable releases
 - Keep all builds <30 days
 - Thinning schedule >30 days:
@@ -73,35 +122,22 @@ Applies retention policy, removes old builds.
   - 180-450d: every 8 days
 - Drop builds >450 days
 
-Runs monthly. Creates backup branch before squashing history.
-
-### `backfill-data.mjs`
-Backfills missing GFX + Brotli-compresses JSON for old builds, with per-step progress logs.
-
-**Independent processes:**
-- Downloads/converts GFX only if missing WebP
-- Brotli-compresses JSON only if not already compressed
-
-See script header (`node backfill-data.mjs`) for full documentation. In parity with `pull-data.mjs` via shared logic in `pipeline.mjs`.
-
-### `pinyin.mjs`
-Generates pinyin mappings for Chinese translations using the `pinyin` package.
-
 ## Workflows
 
-### `.github/workflows/pull-data.yml`
-**Schedule:** Every 12 hours  
-**Runs:**
-1. Checkout action + data branches
-2. Run `pull-data.mjs`
-3. Install compression tools (webp, brotli)
-4. Convert PNG→WebP
-5. Brotli-compress JSON (replaces .json files with compressed versions)
-6. Commit + push to data branch
+### .github/workflows/pull-data.yml
+Schedule: Every 12 hours
 
-### `.github/workflows/prune-data.yml`
-**Schedule:** Monthly (12th at 02:00 UTC)  
-**Runs:**
+Runs:
+1. Checkout action + data branches
+2. Run pull-data.mjs
+3. Install webp + brotli tools
+4. Run postprocess-data.mjs
+5. Commit + push to data branch
+
+### .github/workflows/prune-data.yml
+Schedule: Monthly (12th at 02:00 UTC)
+
+Runs:
 1. Apply retention policy
 2. Delete old builds
 3. Create backup branch
@@ -110,7 +146,7 @@ Generates pinyin mappings for Chinese translations using the `pinyin` package.
 
 ## Testing
 
-**`tests/test-retention.mjs`** validates pruning logic:
+tests/test-retention.mjs validates pruning logic:
 - Stable releases always kept
 - Recent builds (<30d) kept
 - Thinning applied correctly
@@ -118,30 +154,23 @@ Generates pinyin mappings for Chinese translations using the `pinyin` package.
 
 ## Data Structure
 
-```
 data_workspace/
 ├── builds.json              # Build metadata (NOT compressed - used by workflows)
 └── data/
-    ├── stable -> v0.9.1/    # Symlink to latest stable release
+    ├── stable -> v0.9.1/     # Symlink to latest stable release
     ├── nightly -> 2026-01-10/ # Symlink to latest prerelease
     └── 2024-01-10/
-        ├── all.json         # Game objects (Brotli-compressed)
-        ├── all_mods.json    # Mod data (Brotli-compressed)
-        ├── lang/            # Translations (Brotli-compressed)
+        ├── all.json          # Game objects (Brotli-compressed)
+        ├── all_mods.json     # Mod data (Brotli-compressed)
+        ├── lang/             # Translations (Brotli-compressed)
         │   ├── fr.json
         │   ├── zh_CN.json
         │   └── zh_CN_pinyin.json
-        └── gfx/             # WebP graphics
-```
+        └── gfx/              # WebP graphics
 
-**Symlinks:** `stable` and `nightly` are filesystem symlinks updated on each pull-data run.
-They provide stable URLs (`/data/stable/all.json`, `/data/nightly/all.json`) without
-needing to resolve via `builds.json`. Not included in `builds.json`.
+Symlinks `stable` and `nightly` are filesystem symlinks updated on each pull-data run.
+They provide stable URLs without resolving via builds.json. Not included in builds.json.
 
-**Note:** All `.json` files are actually Brotli-compressed. The `_headers` file 
-instructs Cloudflare to serve them with `Content-Encoding: br`.
+## Rules Files
 
-
-## Deployment
-
-Cloudflare Pages deploys directly from `main` branch.
+No Cursor rules or Copilot instructions found in this repository.
