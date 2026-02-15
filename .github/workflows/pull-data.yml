@@ -18,6 +18,9 @@ jobs:
   pull-and-process:
     name: Pull Data, Convert GFX, & Precompress
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [24]
     permissions:
       contents: write
     steps:
@@ -28,7 +31,7 @@ jobs:
           fetch-depth: 1
       
       - name: Checkout data branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.target_branch || 'main' }}
           fetch-depth: 1

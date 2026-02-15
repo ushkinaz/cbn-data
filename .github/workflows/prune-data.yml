@@ -23,28 +23,33 @@ jobs:
   prune-data:
     name: Prune Old Data
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [24]
     permissions:
       contents: write
     steps:
       - name: Checkout action branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: action
           fetch-depth: 1
       
       - name: Checkout data branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.target_branch || 'main' }}
           fetch-depth: 0  # Full history needed for squashing
           path: data_workspace
 
-      - uses: actions/setup-node@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
         with:
-          node-version: '24.x'
-          cache: 'yarn'
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
 
-      - run: yarn install --frozen-lockfile --ignore-engines
+      - name: Fetch Dependencies
+        run: pnpm install
 
       - name: Apply retention policy
         uses: actions/github-script@v8
