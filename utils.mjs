@@ -203,3 +203,61 @@ export function postprocessPoJson(jsonData) {
   }
   return json;
 }
+
+/**
+ * Extract external tileset assets from source zip
+ * @param {ReturnType<createGlobFn>} globFn
+ * @param {string} buildDir - Base directory for the build (e.g. data_workspace/data/TAG)
+ * @param {boolean} dryRun
+ * @param {object} [options]
+ * @param {boolean} [options.convertPNG] - Whether to convert PNG to WebP immediately (for backfill script)
+ * @param {boolean} [options.force] - Force conversion even if WebP exists
+ */
+export function extractExternalTilesets(
+  globFn,
+  buildDir,
+  dryRun,
+  options = {},
+) {
+  const { convertPNG = false, force = false } = options;
+  const externalGfxEntries = [...globFn("*/data/json/external_tileset/**/*")];
+
+  let extracted = 0;
+  let converted = 0;
+  let failed = 0;
+
+  if (externalGfxEntries.length > 0) {
+    console.log(`    🎨 Extracting ${externalGfxEntries.length} external tileset assets...`);
+  }
+
+  for (const entry of externalGfxEntries) {
+    // entry.name is something like "BN-source-dir/data/json/external_tileset/Aftershock_normal.png"
+    // After createGlobFn processing, name is something like "data/json/external_tileset/Aftershock_normal.png"
+    const relPath = entry.name.split("/").slice(3).join("/");
+    if (!relPath || relPath === "README.md") continue;
+
+    // We only want image assets for external tilesets.
+    // metadata (JSON) is already included in all.json compilation.
+    const isPng = relPath.toLowerCase().endsWith(".png");
+    if (!isPng) continue;
+
+    const targetPath = `gfx/external_tileset/${relPath}`;
+    const webpPath = path.join(buildDir, targetPath.replace(/\.png$/, ".webp"));
+
+    if (!dryRun) {
+      // Don't write PNG if WebP already exists (saves disk space and prevents git noise)
+      if (!fs.existsSync(webpPath) || force) {
+        writeFile(buildDir, targetPath, entry.raw());
+        extracted++;
+        if (convertPNG) {
+          if (convertToWebp(path.join(buildDir, targetPath), dryRun, force)) {
+            converted++;
+          } else {
+            failed++;
+          }
+        }
+      }
+    }
+  }
+  return { extracted, converted, failed, count: externalGfxEntries.length };
+}

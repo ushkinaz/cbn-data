@@ -10,6 +10,7 @@ import {
   stripGfxPrefix,
   writeFile,
   getExistingBuilds,
+  extractExternalTilesets,
 } from "./utils.mjs";
 
 /** @type {string[]} */
@@ -190,6 +191,15 @@ export default async function run({ github, context, dryRun = false }) {
       }
       console.log(`Found ${gfxFiles.length} gfx assets.`);
     }
+
+    console.group("Processing external tilesets...");
+    const extStats = extractExternalTilesets(
+      globFn,
+      path.join(workspaceDir, pathBase),
+      dryRun,
+    );
+    console.log(`Found ${extStats.count} external tileset assets.`);
+    console.groupEnd();
 
     console.groupEnd();
 

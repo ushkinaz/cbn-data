@@ -47,6 +47,7 @@ import {
   stripGfxPrefix,
   isCompressed,
   convertToWebp,
+  extractExternalTilesets,
 } from "./utils.mjs";
 import { toPinyin } from "./pinyin.mjs";
 
@@ -110,6 +111,26 @@ function hasGfxFiles(workspaceDir, buildTag) {
 }
 
 /**
+ * Check if a build has external tileset assets
+ * @param {string} workspaceDir
+ * @param {string} buildTag
+ */
+function hasExternalTilesets(workspaceDir, buildTag) {
+  const externalDir = path.join(
+    workspaceDir,
+    "data",
+    buildTag,
+    "gfx",
+    "external_tileset",
+  );
+  const externalFiles = exec(`find "${externalDir}" -type f 2>/dev/null`, {
+    silent: true,
+    ignoreError: true,
+  });
+  return !!(externalFiles && String(externalFiles).trim().length > 0);
+}
+
+/**
  * Check if a build has precompressed JSON files
  * @param {string} workspaceDir
  * @param {string} buildTag
@@ -161,6 +182,7 @@ function hasAllJson(workspaceDir, buildTag) {
  * @param {boolean} [options.needsGfx]
  * @param {boolean} [options.needsJson]
  * @param {boolean} [options.needsLangs]
+ * @param {boolean} [options.needsExternalTilesets]
  * @param {boolean} [options.force]
  */
 async function downloadAndExtractData(
@@ -174,12 +196,14 @@ async function downloadAndExtractData(
     needsGfx = true,
     needsJson = true,
     needsLangs = true,
+    needsExternalTilesets = true,
     force = false,
   } = options;
   const needs = [];
   if (needsJson) needs.push("Data");
   if (needsGfx) needs.push("GFX");
   if (needsLangs) needs.push("Langs");
+  if (needsExternalTilesets) needs.push("External tilesets");
 
   console.log(
     `  📥 Downloading zipball for ${buildTag} (extracting ${needs.join(" + ") || "nothing"})...`,
@@ -335,6 +359,16 @@ async function downloadAndExtractData(
       }
     }
 
+    if (needsExternalTilesets) {
+      const extStats = extractExternalTilesets(globFn, targetDir, dryRun, {
+        convertPNG: true,
+        force,
+      });
+      extracted += extStats.extracted;
+      converted += extStats.converted;
+      failed += extStats.failed;
+    }
+
     // Finalize JSON files
     if (needsJson) {
       writeFile(
@@ -464,6 +498,7 @@ async function migrate() {
         !hasCompressedJson(DEFAULT_WORKSPACE, b.build_number) ||
         !hasAllModsJson(DEFAULT_WORKSPACE, b.build_number) ||
         !hasAllJson(DEFAULT_WORKSPACE, b.build_number) ||
+        !hasExternalTilesets(DEFAULT_WORKSPACE, b.build_number) ||
         !hasLangs(DEFAULT_WORKSPACE, b.build_number),
     );
 
@@ -506,14 +541,16 @@ async function migrate() {
       !hasAllJson(DEFAULT_WORKSPACE, build.build_number);
     const needsLangs =
       force || !hasLangs(DEFAULT_WORKSPACE, build.build_number);
+    const needsExternalTilesets =
+      force || !hasExternalTilesets(DEFAULT_WORKSPACE, build.build_number);
 
-    if (needsGfx || needsJson || needsLangs) {
+    if (needsGfx || needsJson || needsLangs || needsExternalTilesets) {
       const stats = await downloadAndExtractData(
         github,
         build.build_number,
         targetDir,
         dryRun,
-        { needsGfx, needsJson, needsLangs, force },
+        { needsGfx, needsJson, needsLangs, needsExternalTilesets, force },
       );
 
       totalExtracted += stats.extracted;
