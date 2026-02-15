@@ -1,8 +1,5 @@
 {
   "type": "module",
-  "scripts": {
-    "test": "node tests/test-retention.mjs"
-  },
   "dependencies": {
     "gettext.js": "^2.0.3",
     "minimatch": "^5.0.0",
