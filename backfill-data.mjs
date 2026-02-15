@@ -264,23 +264,28 @@ function createGlobFn(zipBuffer) {
  * Convert PNG to WebP
  * @param {string} pngPath
  * @param {boolean} dryRun
+ * @param {boolean} [force]
  * @returns {boolean} success
  */
-function convertToWebp(pngPath, dryRun) {
-    const webpPath = pngPath.replace(/\.png$/, ".webp");
+function convertToWebp(pngPath, dryRun, force = false) {
+  const webpPath = pngPath.replace(/\.png$/, ".webp");
 
-    if (dryRun) {
-        return true;
-    }
+  if (fs.existsSync(webpPath) && !force) {
+    return true;
+  }
 
-    try {
-        exec(`cwebp -preset icon "${pngPath}" -o "${webpPath}"`, { silent: true });
-        fs.unlinkSync(pngPath);
-        return true;
-    } catch (error) {
-        console.error(`    ⚠️  Failed to convert: ${path.basename(pngPath)}`);
-        return false;
-    }
+  if (dryRun) {
+    return true;
+  }
+
+  try {
+    exec(`cwebp -preset icon "${pngPath}" -o "${webpPath}"`, { silent: true });
+    fs.unlinkSync(pngPath);
+    return true;
+  } catch (error) {
+    console.error(`    ⚠️  Failed to convert: ${path.basename(pngPath)}`);
+    return false;
+  }
 }
 
 /**
@@ -292,6 +297,7 @@ function convertToWebp(pngPath, dryRun) {
  * @param {object} options
  * @param {boolean} [options.needsGfx]
  * @param {boolean} [options.needsJson]
+ * @param {boolean} [options.force]
  */
 async function downloadAndExtractData(
   github,
@@ -300,7 +306,7 @@ async function downloadAndExtractData(
   dryRun,
   options,
 ) {
-  const { needsGfx = true, needsJson = true } = options;
+  const { needsGfx = true, needsJson = true, force = false } = options;
   console.log(
     `  📥 Downloading zipball for ${buildTag}${needsJson ? " (extracting Data + GFX)" : ""}...`,
   );
@@ -369,11 +375,19 @@ async function downloadAndExtractData(
 
         if (isPng) {
           // Write PNG temporarily, then convert to WebP
-          const tempPngPath = path.join(targetDir, "gfx", relPath);
-          writeFile(targetDir, `gfx/${relPath}`, entry.raw());
+          const targetRelPath = `gfx/${relPath}`;
+          const webpRelPath = targetRelPath.replace(/\.png$/, ".webp");
+          const webpPath = path.join(targetDir, webpRelPath);
+
+          if (fs.existsSync(webpPath) && !force) {
+            continue;
+          }
+
+          const tempPngPath = path.join(targetDir, targetRelPath);
+          writeFile(targetDir, targetRelPath, entry.raw());
           extracted++;
 
-          if (convertToWebp(tempPngPath, false)) {
+          if (convertToWebp(tempPngPath, false, force)) {
             converted++;
           } else {
             failed++;
@@ -444,11 +458,17 @@ async function downloadAndExtractData(
 
         if (needsGfx && isPng) {
           const targetPath = `mods/${modId}/${relPathInsideMod}`;
+          const webpPath = path.join(targetDir, targetPath.replace(/\.png$/, ".webp"));
+
+          if (fs.existsSync(webpPath) && !force) {
+            continue;
+          }
+
           const tempPngPath = path.join(targetDir, targetPath);
           writeFile(targetDir, targetPath, entry.raw());
           extracted++;
 
-          if (convertToWebp(tempPngPath, false)) {
+          if (convertToWebp(tempPngPath, false, force)) {
             converted++;
           } else {
             failed++;
@@ -633,7 +653,7 @@ async function migrate() {
         build.build_number,
         targetDir,
         dryRun,
-        { needsGfx, needsJson },
+        { needsGfx, needsJson, force },
       );
 
       totalExtracted += stats.extracted;
