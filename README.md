@@ -109,7 +109,7 @@ Comparing the baseline (Gzip JSON + PNG) against the current optimized stack (Br
 git clone --single-branch https://github.com/ushkinaz/cbn-data
 
 # Install dependencies
-yarn install --frozen-lockfile --ignore-engines
+pnpm install
 
 # Run data pull (dry-run by default)
 node pull-data-launcher.js

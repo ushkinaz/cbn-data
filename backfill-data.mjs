@@ -7,7 +7,7 @@
  * Prerequisites:
  *   - brew install webp brotli  (macOS)
  *   - sudo apt-get install webp brotli  (Linux)
- *   - yarn install --frozen-lockfile --ignore-engines
+ *   - pnpm install --frozen-lockfile --ignore-engines
  *   - export GITHUB_TOKEN=your_token_here
  * 
  * Usage:

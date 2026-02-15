@@ -25,7 +25,7 @@ Lint / Format:
 - No lint or formatting tools are configured in this repo.
 
 Tests:
-- Run all tests: `yarn test`
+- Run all tests: `pnpm test`
 - Run a single test file: `node tests/test-retention.mjs`
 
 ## Common Commands
