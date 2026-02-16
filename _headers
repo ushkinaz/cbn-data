@@ -19,7 +19,7 @@
 /builds.json
   Access-Control-Allow-Origin: *
   Referrer-Policy: strict-origin-when-cross-origin
-  Cache-Control: public, max-age=10800, s-maxage=10800, stale-while-revalidate=10800, stale-if-error=86400
+  Cache-Control: public, max-age=900, s-maxage=900, stale-while-revalidate=43200, stale-if-error=86400
   X-Content-Type-Options: nosniff
   X-Robots-Tag: noindex
 
@@ -38,7 +38,7 @@
 
 # Symlink targets
 /data/nightly/*
-  Cache-Control: public, max-age=10800, s-maxage=10800, stale-while-revalidate=10800, stale-if-error=86400, no-transform
+  Cache-Control: public, max-age=900, s-maxage=900, stale-while-revalidate=43200, stale-if-error=86400, no-transform
 
 /data/stable/*
   Cache-Control: public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600, stale-if-error=604800, no-transform
