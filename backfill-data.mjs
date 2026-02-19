@@ -309,6 +309,7 @@ async function migrate() {
       .map(([key, _]) => key);
 
     if (needsArray.length === 0) {
+      console.log(`  ⏭️  Skipping ${build.build_number} (already up-to-date)`);
       continue;
     }
 
