@@ -168,9 +168,6 @@ function hasCompressedJson(workspaceDir, buildTag) {
   const buildDir = path.join(workspaceDir, "data", buildTag);
   if (!fs.existsSync(buildDir)) return false;
 
-  const markerPath = path.join(buildDir, ".compressed");
-  if (fs.existsSync(markerPath)) return true;
-
   return allJsonCompressed(buildDir);
 }
 
@@ -295,35 +292,41 @@ async function migrate() {
     const pathBase = `data/${build.build_number}`;
     const buildDir = path.join(DEFAULT_WORKSPACE, pathBase);
 
-    const needsGfx =
-      force || !hasGfxFiles(DEFAULT_WORKSPACE, build.build_number);
-    const needsJson =
-      force ||
-      !hasAllModsJson(DEFAULT_WORKSPACE, build.build_number) ||
-      !hasAllJson(DEFAULT_WORKSPACE, build.build_number);
-    const needsLangs =
-      force || !hasLangs(DEFAULT_WORKSPACE, build.build_number);
-    const needsExternalTilesets =
-      force || !hasExternalTilesets(DEFAULT_WORKSPACE, build.build_number);
-    const needsCompression =
-      force || !hasCompressedJson(DEFAULT_WORKSPACE, build.build_number);
+    const needs = {
+      GFX: force || !hasGfxFiles(DEFAULT_WORKSPACE, build.build_number),
+      JSON:
+        force ||
+        !hasAllModsJson(DEFAULT_WORKSPACE, build.build_number) ||
+        !hasAllJson(DEFAULT_WORKSPACE, build.build_number),
+      Langs: force || !hasLangs(DEFAULT_WORKSPACE, build.build_number),
+      ETS: force || !hasExternalTilesets(DEFAULT_WORKSPACE, build.build_number),
+      Compression:
+        force || !hasCompressedJson(DEFAULT_WORKSPACE, build.build_number),
+    };
 
-    if (
-      !needsGfx &&
-      !needsJson &&
-      !needsLangs &&
-      !needsExternalTilesets &&
-      !needsCompression
-    ) {
+    const needsArray = Object.entries(needs)
+      .filter(([_, value]) => value)
+      .map(([key, _]) => key);
+
+    if (needsArray.length === 0) {
       continue;
     }
 
     buildsProcessed++;
     console.group(`📦 Processing ${build.build_number}`);
+    console.log(`  Needs: ${needsArray.join(", ")}`);
+
+    const {
+      GFX: needsGfx,
+      JSON: needsJson,
+      Langs: needsLangs,
+      ETS: needsExternalTilesets,
+      Compression: needsCompression,
+    } = needs;
 
     if (needsGfx || needsJson || needsLangs || needsExternalTilesets) {
       console.log(
-        `  📥 Downloading zipball (needed for: ${[needsGfx && "GFX", needsJson && "JSON", needsLangs && "Langs", needsExternalTilesets && "ETS"].filter(Boolean).join(", ")})`,
+        `  📥 Downloading zipball (needed for: ${needsArray.filter((n) => n !== "Compression").join(", ")})`,
       );
       const { data: zip } = await github.rest.repos.downloadZipballArchive({
         owner: "cataclysmbn",
@@ -454,8 +457,7 @@ async function migrate() {
         `    JSON files: ${stats.jsonCount}, compressed: ${stats.compressedCount}`,
       );
       if (!dryRun && allJsonCompressed(buildDir)) {
-        fs.writeFileSync(path.join(buildDir, ".compressed"), "true");
-        console.log("    .compressed marker written");
+        console.log("    Build fully compressed");
       }
     }
 

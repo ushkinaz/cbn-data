@@ -140,13 +140,27 @@ export function createGlobFn(zipBuffer) {
 }
 
 /**
- * Check if a file is already compressed using the 'file' utility
+ * Check if a file is already compressed using a hybrid approach
  * @param {string} filePath
  */
 export function isCompressed(filePath) {
   if (!fs.existsSync(filePath)) return false;
+
   try {
-    // Use brotli -t to test if the file is a valid Brotli stream
+    // Fast Path: Check if it looks like uncompressed JSON
+    // We read a small buffer to check for '{' or '['
+    const fd = fs.openSync(filePath, "r");
+    const buffer = Buffer.alloc(1);
+    fs.readSync(fd, buffer, 0, 1, 0);
+    fs.closeSync(fd);
+
+    const firstByte = buffer[0];
+    // ASCII '{' is 0x7B, '[' is 0x5B
+    if (firstByte === 0x7b || firstByte === 0x5b) {
+      return false;
+    }
+
+    // Slow Path: Fallback to brotli -t for confirmation
     execSync(`brotli -t "${filePath}"`, { stdio: "ignore" });
     return true;
   } catch (e) {

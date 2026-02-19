@@ -157,13 +157,6 @@ async function postprocess() {
       console.log("  🧩 No mod PNGs");
     }
 
-    const markerPath = path.join(buildDir, ".compressed");
-    if (!force && fs.existsSync(markerPath)) {
-      console.log("  🗜️  JSON already compressed (marker present)");
-      console.groupEnd();
-      console.log("");
-      continue;
-    }
 
     console.log("  🗜️  Precompressing JSON...");
     const compressionStats = compressJsonFiles(buildDir, dryRun, force);
@@ -173,8 +166,7 @@ async function postprocess() {
       `    JSON files: ${compressionStats.jsonCount}, compressed: ${compressionStats.compressedCount}`,
     );
     if (!dryRun && allJsonCompressed(buildDir)) {
-      fs.writeFileSync(markerPath, "true");
-      console.log("    .compressed marker written");
+      console.log("    Build fully compressed");
     }
 
     console.groupEnd();

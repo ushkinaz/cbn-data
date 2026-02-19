@@ -79,7 +79,6 @@ Pipeline conventions:
 
 Compression:
 - `.json` files are Brotli-compressed and served with `Content-Encoding: br`.
-- Use `.compressed` marker to skip rework.
 
 ## Key Scripts
 
@@ -99,7 +98,7 @@ Does not:
 ### postprocess-data.mjs
 Postprocesses data workspace to align with CI:
 - Converts PNG→WebP for base gfx and mod assets
-- Brotli-compresses `.json` files and writes `.compressed`
+- Brotli-compresses `.json` files
 - Designed to be deterministic and reusable in CI and manual runs
 
 ### backfill-data.mjs
