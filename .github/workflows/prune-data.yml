@@ -42,6 +42,9 @@ jobs:
           fetch-depth: 0  # Full history needed for squashing
           path: data_workspace
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
