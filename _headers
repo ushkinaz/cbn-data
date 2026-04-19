@@ -1,10 +1,10 @@
 # If a path matches more than one rule, and headers are defined in multiple rules, multiple headers are added.
 # That means we have to make sure that only one Cache-Control is applied ever - usually in the most specific rule.
 
-# WebP assets (immutable)
+# WebP assets
 /data/*.webp
-  Cache-Control: public, max-age=31536000, s-maxage=31536000, immutable
   Access-Control-Allow-Origin: *
+  Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
   X-Robots-Tag: noindex
 
@@ -29,16 +29,30 @@
   Content-Type: application/json
   Vary: Accept-Encoding
 
-# Versioned, immutable snapshots
+# Stable named versions
 /data/v*.json
   Cache-Control: public, max-age=31536000, s-maxage=31536000, immutable, no-transform
 
+/data/v*.webp
+  Cache-Control: public, max-age=31536000, s-maxage=31536000, immutable
+
+# Nightly named versions
 /data/20*.json
   Cache-Control: public, max-age=31536000, s-maxage=31536000, immutable, no-transform
 
-# Symlink targets
+/data/20*.webp
+  Cache-Control: public, max-age=31536000, s-maxage=31536000, immutable
+
+# Latest stable - symlink
+/data/stable/*.json
+  Cache-Control: public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600, stale-if-error=604800, no-transform
+
+/data/stable/*.webp
+  Cache-Control: public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600, stale-if-error=604800
+
+# Latest nightly - symlink
 /data/nightly/*
   Cache-Control: public, max-age=900, s-maxage=900, stale-while-revalidate=43200, stale-if-error=86400, no-transform
 
-/data/stable/*
-  Cache-Control: public, max-age=86400, s-maxage=86400, stale-while-revalidate=3600, stale-if-error=604800, no-transform
+/data/nightly/*.webp
+  Cache-Control: public, max-age=900, s-maxage=900, stale-while-revalidate=43200, stale-if-error=86400
