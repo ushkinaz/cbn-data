@@ -10,6 +10,8 @@ import {
   processLangs,
   processBaseGfx,
   extractExternalTilesets,
+  fetchTranslationsGlobFn,
+  hasPoFiles,
 } from "./pipeline.mjs";
 
 /** @type {string[]} */
@@ -38,6 +40,16 @@ export default async function run({ github, context, dryRun = false }) {
 
   const existingBuilds = getExistingBuilds(workspaceDir);
   console.log(`Found ${existingBuilds.length} existing builds`);
+
+  /** @type {Promise<ReturnType<typeof createGlobFn>> | null} */
+  let translationsGlobFnPromise = null;
+  const getTranslationsGlobFn = () => {
+    if (!translationsGlobFnPromise) {
+      console.log("Fetching translations from cataclysmbn/translations...");
+      translationsGlobFnPromise = fetchTranslationsGlobFn(github);
+    }
+    return translationsGlobFnPromise;
+  };
 
   const newBuilds = [];
 
@@ -83,7 +95,10 @@ export default async function run({ github, context, dryRun = false }) {
       dryRun,
     );
 
-    const { langs } = await processLangs(globFn, buildDir, dryRun, data);
+    const langGlobFn = hasPoFiles(globFn)
+      ? globFn
+      : await getTranslationsGlobFn();
+    const { langs } = await processLangs(langGlobFn, buildDir, dryRun, data);
 
     processBaseGfx(globFn, buildDir, dryRun, { convertGfx: false });
     extractExternalTilesets(globFn, buildDir, dryRun, {

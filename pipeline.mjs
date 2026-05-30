@@ -140,6 +140,27 @@ export function createGlobFn(zipBuffer) {
 }
 
 /**
+ * Check whether an archive contains PO translations.
+ * @param {ReturnType<createGlobFn>} globFn
+ */
+export function hasPoFiles(globFn) {
+  return !globFn("*/lang/po/*.po").next().done;
+}
+
+/**
+ * Download translations from the external translations repository.
+ * @param {Pick<import("octokit").Octokit, "rest">} github
+ */
+export async function fetchTranslationsGlobFn(github) {
+  const { data: zip } = await github.rest.repos.downloadZipballArchive({
+    owner: "cataclysmbn",
+    repo: "translations",
+    ref: "main",
+  });
+  return createGlobFn(Buffer.from(/** @type {any} */ (zip)));
+}
+
+/**
  * Check if a file is already compressed using a hybrid approach
  * @param {string} filePath
  */
