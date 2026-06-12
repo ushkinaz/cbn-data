@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>404 // NODE FAILED</title>
+        <meta
+            name="description"
+            content="Cataclysm: Bright Nights mirror. The requested path could not be found in the vault."
+        />
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap");
+
+            :root {
+                --bg: #000000;
+                --green: #00ff41;
+                --green-dim: #009922;
+                --cyan: #00ffff;
+                --red: #ff0050;
+                --glow: rgba(0, 255, 65, 0.4);
+                --panel: rgba(0, 10, 0, 0.85);
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                background:
+                    radial-gradient(
+                        circle at top,
+                        rgba(0, 255, 65, 0.08),
+                        transparent 50%
+                    ),
+                    linear-gradient(
+                        180deg,
+                        #030303 0%,
+                        #000000 60%,
+                        #050505 100%
+                    );
+                color: var(--green);
+                font-family: "Share Tech Mono", monospace;
+                overflow-x: hidden;
+                position: relative;
+            }
+
+            body::after {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 255, 65, 0.04) 0px,
+                    transparent 2px,
+                    transparent 4px,
+                    rgba(0, 255, 65, 0.04) 5px
+                );
+                pointer-events: none;
+                opacity: 0.3;
+            }
+
+            .scene {
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 40px;
+                position: relative;
+                z-index: 1;
+            }
+
+            .panel {
+                width: min(960px, 100%);
+                border: 3px solid var(--green);
+                background: var(--panel);
+                padding: 32px;
+                box-shadow:
+                    0 0 40px rgba(0, 255, 65, 0.35),
+                    inset 0 0 20px rgba(0, 255, 65, 0.1);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .panel::before {
+                content: "// DATA NOT FOUND //";
+                position: absolute;
+                top: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 0.7rem;
+                letter-spacing: 5px;
+                color: var(--cyan);
+                text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+            }
+
+            .status-bar {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin-bottom: 24px;
+            }
+
+            .status-chip {
+                padding: 6px 14px;
+                border: 1px solid var(--green);
+                letter-spacing: 1px;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                color: var(--green);
+                background: rgba(0, 255, 65, 0.08);
+            }
+
+            h1 {
+                font-family: "VT323", monospace;
+                font-size: clamp(3rem, 4vw, 4.5rem);
+                margin: 0;
+                text-transform: uppercase;
+                letter-spacing: 6px;
+                color: var(--cyan);
+                text-shadow:
+                    0 0 20px rgba(0, 255, 255, 0.6),
+                    0 0 40px rgba(0, 255, 255, 0.3);
+            }
+
+            .details {
+                margin-top: 20px;
+                font-size: 1rem;
+                line-height: 1.8;
+                color: var(--green-dim);
+            }
+
+            .details strong {
+                color: var(--green);
+            }
+
+            .ascii-frame {
+                margin: 30px auto;
+                width: min(600px, 100%);
+                padding: 18px;
+                background: rgba(0, 0, 0, 0.6);
+                border: 2px dashed var(--green-dim);
+                font-family: "VT323", monospace;
+                font-size: 0.7rem;
+                letter-spacing: 2px;
+                line-height: 1.1;
+                text-align: center;
+                box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.15);
+            }
+
+            .glow-button {
+                display: inline-flex;
+                gap: 8px;
+                align-items: center;
+                padding: 12px 24px;
+                margin-top: 10px;
+                border: 2px solid var(--cyan);
+                color: var(--cyan);
+                text-decoration: none;
+                font-family: "Rajdhani", sans-serif;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                font-size: 0.85rem;
+                transition:
+                    transform 0.2s ease,
+                    box-shadow 0.2s ease;
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            }
+
+            .glow-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+                background: rgba(0, 255, 255, 0.1);
+            }
+
+            .matrix {
+                position: absolute;
+                inset: 0;
+                z-index: 0;
+                pointer-events: none;
+                opacity: 0.2;
+            }
+
+            .matrix span {
+                position: absolute;
+                font-family: "VT323", monospace;
+                color: rgba(0, 255, 65, 0.6);
+                letter-spacing: 1px;
+                animation: fall linear infinite;
+            }
+
+            @keyframes fall {
+                0% {
+                    transform: translateY(-20vh);
+                    opacity: 0;
+                }
+                30% {
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(120vh);
+                    opacity: 0;
+                }
+            }
+
+            .loop {
+                margin-top: 40px;
+                font-size: 0.9rem;
+                display: flex;
+                justify-content: space-between;
+                gap: 20px;
+                flex-wrap: wrap;
+            }
+
+            .loop span {
+                display: inline-flex;
+                gap: 6px;
+                align-items: center;
+                color: var(--green-dim);
+            }
+
+            .loop strong {
+                color: var(--green);
+            }
+
+            @media (max-width: 600px) {
+                .panel {
+                    padding: 24px;
+                }
+
+                .loop {
+                    flex-direction: column;
+                    gap: 8px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="matrix" aria-hidden="true"></div>
+        <main class="scene">
+            <section class="panel" role="alert">
+                <div class="status-bar">
+                    <span class="status-chip">CODE 404</span>
+                    <span class="status-chip">NODE MISSING</span>
+                    <span class="status-chip">CLOUDFLARE CDN</span>
+                </div>
+                <h1>404</h1>
+                <p class="details">
+                    <strong>Survivor log:</strong> The coordinates you requested
+                    faded into the static void between mirror shards. The
+                    terminal probed all caches, but this path is not in the
+                    vault. If you typed the link manually, verify the route and
+                    try again.
+                </p>
+                <div class="ascii-frame" aria-label="Missing sequence">
+<pre>
+0xC00: 00 00 0B 4C 6F 73 74 20 61 74 20 37 34 38 20 53
+0xC10: 69 6C 65 6E 63 65 20 4F 6F 70 73 20 53 4D 4F 4B
+0xC20: 45 20 43 48 41 53 53 20 53 4C 41 49 4E 54 20 45
+0xC30: 58 54 52 41 20 4E 4F 20 44 41 54 41 20 4E 41 4D
+0xC40: 45 20 58 46 38 30 36 20 4E 55 4C 4C 20 44 41 54
+</pre>
+                </div>
+                <p class="details">
+                    The data loop tried to reroute you to
+                    <strong>/index.html</strong>, but the uplink still reports
+                    404. Use the controls below to return to the safe zone.
+                </p>
+                <a class="glow-button" href="/index.html"
+                    >↺ REROUTE TO TERMINAL</a
+                >
+                <div class="loop">
+                    <span>
+                        <strong>Latency:</strong>
+                        <span>38ms</span>
+                    </span>
+                    <span>
+                        <strong>Packet Drift:</strong>
+                        <span>+1.4%</span>
+                    </span>
+                    <span>
+                        <strong>Guard:</strong>
+                        <span>CF Pages &amp; Brotli</span>
+                    </span>
+                </div>
+            </section>
+        </main>
+        <script>
+            const matrix = document.querySelector(".matrix");
+            const chars = "01░▒▓█▉▊▋▌▍▎";
+            const columns = Math.floor(window.innerWidth / 20);
+
+            for (let i = 0; i < columns; i++) {
+                const span = document.createElement("span");
+                span.style.left = `${i * 20}px`;
+                span.style.fontSize = `${Math.random() * 22 + 10}px`;
+                span.style.animationDuration = `${Math.random() * 5 + 3}s`;
+                span.textContent = chars.charAt(
+                    Math.floor(Math.random() * chars.length),
+                );
+                matrix.appendChild(span);
+            }
+        </script>
+    </body>
+</html>
