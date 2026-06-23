@@ -126,6 +126,37 @@ test("createCachedTranslationsGlobFn lazily downloads translations once", async 
   assert.equal(hasPoFiles(firstGlobFn), true);
 });
 
+test("createCachedTranslationsGlobFn retries after a failed download", async () => {
+  const zip = new AdmZip();
+  zip.addFile("translations-main/lang/po/fr.po", Buffer.from(po));
+
+  let calls = 0;
+  const github = {
+    rest: {
+      repos: {
+        downloadZipballArchive: async () => {
+          calls++;
+          if (calls === 1) throw new Error("temporary outage");
+          return { data: zip.toBuffer() };
+        },
+      },
+    },
+  };
+
+  // @ts-expect-error This mock implements the needed GitHub REST method.
+  const getTranslationsGlobFn = createCachedTranslationsGlobFn(github);
+
+  await assert.rejects(() => getTranslationsGlobFn(), /temporary outage/);
+  const [firstGlobFn, secondGlobFn] = await Promise.all([
+    getTranslationsGlobFn(),
+    getTranslationsGlobFn(),
+  ]);
+
+  assert.equal(calls, 2);
+  assert.equal(firstGlobFn, secondGlobFn);
+  assert.equal(hasPoFiles(firstGlobFn), true);
+});
+
 test("processLangs writes JSON from a translations repository layout", async (t) => {
   const buildDir = await mkdtemp(path.join(os.tmpdir(), "cbn-data-lang-"));
   t.after(() => rm(buildDir, { recursive: true, force: true }));

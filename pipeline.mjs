@@ -184,7 +184,12 @@ export function createCachedTranslationsGlobFn(github, options = {}) {
   return () => {
     if (!translationsGlobFnPromise) {
       if (options.logMessage) console.log(options.logMessage);
-      translationsGlobFnPromise = fetchTranslationsGlobFn(github);
+      translationsGlobFnPromise = fetchTranslationsGlobFn(github).catch(
+        (error) => {
+          translationsGlobFnPromise = null;
+          throw error;
+        },
+      );
     }
     return translationsGlobFnPromise;
   };
