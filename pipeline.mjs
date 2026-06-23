@@ -147,17 +147,47 @@ export function hasPoFiles(globFn) {
   return !globFn("*/lang/po/*.po").next().done;
 }
 
+const TRANSLATIONS_ARCHIVE = {
+  owner: "cataclysmbn",
+  repo: "translations",
+  ref: "main",
+};
+
 /**
  * Download translations from the external translations repository.
  * @param {Pick<import("octokit").Octokit, "rest">} github
  */
 export async function fetchTranslationsGlobFn(github) {
-  const { data: zip } = await github.rest.repos.downloadZipballArchive({
-    owner: "cataclysmbn",
-    repo: "translations",
-    ref: "main",
-  });
-  return createGlobFn(Buffer.from(/** @type {any} */ (zip)));
+  try {
+    const { data: zip } = await github.rest.repos.downloadZipballArchive(
+      TRANSLATIONS_ARCHIVE,
+    );
+    return createGlobFn(Buffer.from(/** @type {any} */ (zip)));
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to download translations archive ${TRANSLATIONS_ARCHIVE.owner}/${TRANSLATIONS_ARCHIVE.repo}@${TRANSLATIONS_ARCHIVE.ref}: ${reason}`,
+      { cause: error },
+    );
+  }
+}
+
+/**
+ * Create a lazy cached loader for the external translations archive.
+ * @param {Pick<import("octokit").Octokit, "rest">} github
+ * @param {object} [options]
+ * @param {string} [options.logMessage]
+ */
+export function createCachedTranslationsGlobFn(github, options = {}) {
+  /** @type {Promise<ReturnType<typeof createGlobFn>> | null} */
+  let translationsGlobFnPromise = null;
+  return () => {
+    if (!translationsGlobFnPromise) {
+      if (options.logMessage) console.log(options.logMessage);
+      translationsGlobFnPromise = fetchTranslationsGlobFn(github);
+    }
+    return translationsGlobFnPromise;
+  };
 }
 
 /**

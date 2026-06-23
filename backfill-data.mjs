@@ -49,7 +49,7 @@ import {
   compressJsonFiles,
   extractExternalTilesets,
   createGlobFn,
-  fetchTranslationsGlobFn,
+  createCachedTranslationsGlobFn,
   hasPoFiles,
 } from "./pipeline.mjs";
 
@@ -227,15 +227,9 @@ async function migrate() {
   }
 
   const github = new Octokit({ auth: token });
-  /** @type {Promise<ReturnType<typeof createGlobFn>> | null} */
-  let translationsGlobFnPromise = null;
-  const getTranslationsGlobFn = () => {
-    if (!translationsGlobFnPromise) {
-      console.log("  📥 Downloading translations from cataclysmbn/translations");
-      translationsGlobFnPromise = fetchTranslationsGlobFn(github);
-    }
-    return translationsGlobFnPromise;
-  };
+  const getTranslationsGlobFn = createCachedTranslationsGlobFn(github, {
+    logMessage: "  📥 Downloading translations from cataclysmbn/translations",
+  });
 
   // Initialize or update the workspace using git worktree
   const worktreeExists = fs.existsSync(DEFAULT_WORKSPACE);

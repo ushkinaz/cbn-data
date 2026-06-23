@@ -7,6 +7,7 @@ import test from "node:test";
 import AdmZip from "adm-zip";
 
 import {
+  createCachedTranslationsGlobFn,
   fetchTranslationsGlobFn,
   hasPoFiles,
   processLangs,
@@ -66,6 +67,63 @@ test("fetchTranslationsGlobFn downloads the external translations archive", asyn
   ]);
   assert.equal(hasPoFiles(globFn), true);
   assert.equal([...globFn("*/lang/po/*.po")][0].name, "lang/po/fr.po");
+});
+
+test("fetchTranslationsGlobFn wraps download errors with repository context", async () => {
+  const originalError = new Error("rate limit");
+  const github = {
+    rest: {
+      repos: {
+        downloadZipballArchive: async () => {
+          throw originalError;
+        },
+      },
+    },
+  };
+
+  await assert.rejects(
+    // @ts-expect-error This mock implements the needed GitHub REST method.
+    () => fetchTranslationsGlobFn(github),
+    (error) => {
+      assert.ok(error instanceof Error);
+      assert.match(
+        error.message,
+        /Failed to download translations archive cataclysmbn\/translations@main: rate limit/,
+      );
+      assert.equal(error.cause, originalError);
+      return true;
+    },
+  );
+});
+
+test("createCachedTranslationsGlobFn lazily downloads translations once", async () => {
+  const zip = new AdmZip();
+  zip.addFile("translations-main/lang/po/fr.po", Buffer.from(po));
+
+  let calls = 0;
+  const github = {
+    rest: {
+      repos: {
+        downloadZipballArchive: async () => {
+          calls++;
+          return { data: zip.toBuffer() };
+        },
+      },
+    },
+  };
+
+  // @ts-expect-error This mock implements the needed GitHub REST method.
+  const getTranslationsGlobFn = createCachedTranslationsGlobFn(github);
+
+  assert.equal(calls, 0);
+  const [firstGlobFn, secondGlobFn] = await Promise.all([
+    getTranslationsGlobFn(),
+    getTranslationsGlobFn(),
+  ]);
+
+  assert.equal(calls, 1);
+  assert.equal(firstGlobFn, secondGlobFn);
+  assert.equal(hasPoFiles(firstGlobFn), true);
 });
 
 test("processLangs writes JSON from a translations repository layout", async (t) => {

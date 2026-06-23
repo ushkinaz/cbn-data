@@ -10,7 +10,7 @@ import {
   processLangs,
   processBaseGfx,
   extractExternalTilesets,
-  fetchTranslationsGlobFn,
+  createCachedTranslationsGlobFn,
   hasPoFiles,
 } from "./pipeline.mjs";
 
@@ -41,15 +41,9 @@ export default async function run({ github, context, dryRun = false }) {
   const existingBuilds = getExistingBuilds(workspaceDir);
   console.log(`Found ${existingBuilds.length} existing builds`);
 
-  /** @type {Promise<ReturnType<typeof createGlobFn>> | null} */
-  let translationsGlobFnPromise = null;
-  const getTranslationsGlobFn = () => {
-    if (!translationsGlobFnPromise) {
-      console.log("Fetching translations from cataclysmbn/translations...");
-      translationsGlobFnPromise = fetchTranslationsGlobFn(github);
-    }
-    return translationsGlobFnPromise;
-  };
+  const getTranslationsGlobFn = createCachedTranslationsGlobFn(github, {
+    logMessage: "Fetching translations from cataclysmbn/translations...",
+  });
 
   const newBuilds = [];
 
