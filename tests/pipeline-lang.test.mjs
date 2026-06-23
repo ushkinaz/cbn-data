@@ -13,6 +13,11 @@ import {
   processLangs,
 } from "../pipeline.mjs";
 
+const translationsArchive = {
+  owner: "cataclysmbn",
+  repo: "translations",
+  ref: "main",
+};
 const po = `msgid ""
 msgstr ""
 "Language: fr\\n"
@@ -21,68 +26,57 @@ msgstr ""
 msgid "apple"
 msgstr "pomme"
 `;
-
-/**
- * @param {Array<{name: string, data: () => string, raw: () => Buffer}>} entries
- */
-function createLangGlobFn(entries) {
-  /** @param {string} pattern */
-  return function* glob(pattern) {
-    if (pattern !== "*/lang/po/*.po") return;
-    yield* entries;
-  };
-}
+const poEntry = () => ({
+  name: "lang/po/fr.po",
+  data: () => po,
+  raw: () => Buffer.from(po),
+});
+const createLangGlobFn = (entries) => function* glob(pattern) {
+  if (pattern === "*/lang/po/*.po") yield* entries;
+};
+const createZipBuffer = () => {
+  const zip = new AdmZip();
+  zip.addFile("translations-main/lang/po/fr.po", Buffer.from(po));
+  return zip.toBuffer();
+};
+const createGithubMock = (downloadZipballArchive) => ({
+  rest: { repos: { downloadZipballArchive } },
+});
 
 test("hasPoFiles detects available PO translations", () => {
-  const globFn = createLangGlobFn([
-    { name: "lang/po/fr.po", data: () => po, raw: () => Buffer.from(po) },
-  ]);
-
-  assert.equal(hasPoFiles(globFn), true);
+  assert.equal(hasPoFiles(createLangGlobFn([poEntry()])), true);
   assert.equal(hasPoFiles(createLangGlobFn([])), false);
 });
 
-test("fetchTranslationsGlobFn downloads the external translations archive", async () => {
-  const zip = new AdmZip();
-  zip.addFile("translations-main/lang/po/fr.po", Buffer.from(po));
-
-  /** @type {Array<Record<string, string>>} */
+test("fetchTranslationsGlobFn downloads and processLangs converts external archive", async (t) => {
   const calls = [];
-  const github = {
-    rest: {
-      repos: {
-        downloadZipballArchive: async (options) => {
-          calls.push(options);
-          return { data: zip.toBuffer() };
-        },
-      },
-    },
-  };
+  const github = createGithubMock(async (options) => {
+    calls.push(options);
+    return { data: createZipBuffer() };
+  });
+  const buildDir = await mkdtemp(path.join(os.tmpdir(), "cbn-data-lang-"));
+  t.after(() => rm(buildDir, { recursive: true, force: true }));
 
-  // @ts-expect-error This mock implements the needed GitHub REST method.
   const globFn = await fetchTranslationsGlobFn(github);
+  const { langs } = await processLangs(globFn, buildDir, false, []);
+  const json = JSON.parse(
+    await readFile(path.join(buildDir, "lang", "fr.json"), "utf8"),
+  );
 
-  assert.deepEqual(calls, [
-    { owner: "cataclysmbn", repo: "translations", ref: "main" },
-  ]);
+  assert.deepEqual(calls, [translationsArchive]);
   assert.equal(hasPoFiles(globFn), true);
-  assert.equal([...globFn("*/lang/po/*.po")][0].name, "lang/po/fr.po");
+  assert.deepEqual(langs, ["fr"]);
+  assert.equal(json[""].language, "fr");
+  assert.equal(json.apple, "pomme");
 });
 
 test("fetchTranslationsGlobFn wraps download errors with repository context", async () => {
   const originalError = new Error("rate limit");
-  const github = {
-    rest: {
-      repos: {
-        downloadZipballArchive: async () => {
-          throw originalError;
-        },
-      },
-    },
-  };
+  const github = createGithubMock(async () => {
+    throw originalError;
+  });
 
   await assert.rejects(
-    // @ts-expect-error This mock implements the needed GitHub REST method.
     () => fetchTranslationsGlobFn(github),
     (error) => {
       assert.ok(error instanceof Error);
@@ -96,80 +90,37 @@ test("fetchTranslationsGlobFn wraps download errors with repository context", as
   );
 });
 
-test("createCachedTranslationsGlobFn lazily downloads translations once", async () => {
-  const zip = new AdmZip();
-  zip.addFile("translations-main/lang/po/fr.po", Buffer.from(po));
-
-  let calls = 0;
-  const github = {
-    rest: {
-      repos: {
-        downloadZipballArchive: async () => {
-          calls++;
-          return { data: zip.toBuffer() };
-        },
-      },
-    },
-  };
-
-  // @ts-expect-error This mock implements the needed GitHub REST method.
-  const getTranslationsGlobFn = createCachedTranslationsGlobFn(github);
-
-  assert.equal(calls, 0);
-  const [firstGlobFn, secondGlobFn] = await Promise.all([
-    getTranslationsGlobFn(),
-    getTranslationsGlobFn(),
-  ]);
-
-  assert.equal(calls, 1);
-  assert.equal(firstGlobFn, secondGlobFn);
-  assert.equal(hasPoFiles(firstGlobFn), true);
-});
-
-test("createCachedTranslationsGlobFn retries after a failed download", async () => {
-  const zip = new AdmZip();
-  zip.addFile("translations-main/lang/po/fr.po", Buffer.from(po));
-
-  let calls = 0;
-  const github = {
-    rest: {
-      repos: {
-        downloadZipballArchive: async () => {
-          calls++;
-          if (calls === 1) throw new Error("temporary outage");
-          return { data: zip.toBuffer() };
-        },
-      },
-    },
-  };
-
-  // @ts-expect-error This mock implements the needed GitHub REST method.
-  const getTranslationsGlobFn = createCachedTranslationsGlobFn(github);
-
-  await assert.rejects(() => getTranslationsGlobFn(), /temporary outage/);
-  const [firstGlobFn, secondGlobFn] = await Promise.all([
-    getTranslationsGlobFn(),
-    getTranslationsGlobFn(),
-  ]);
-
-  assert.equal(calls, 2);
-  assert.equal(firstGlobFn, secondGlobFn);
-  assert.equal(hasPoFiles(firstGlobFn), true);
-});
-
-test("processLangs writes JSON from a translations repository layout", async (t) => {
-  const buildDir = await mkdtemp(path.join(os.tmpdir(), "cbn-data-lang-"));
-  t.after(() => rm(buildDir, { recursive: true, force: true }));
-
-  const globFn = createLangGlobFn([
-    { name: "lang/po/fr.po", data: () => po, raw: () => Buffer.from(po) },
-  ]);
-  const { langs } = await processLangs(globFn, buildDir, false, []);
-
-  assert.deepEqual(langs, ["fr"]);
-  const json = JSON.parse(
-    await readFile(path.join(buildDir, "lang", "fr.json"), "utf8"),
+test("createCachedTranslationsGlobFn caches successes and retries failures", async () => {
+  let cachedCalls = 0;
+  const getCachedGlobFn = createCachedTranslationsGlobFn(
+    createGithubMock(async () => {
+      cachedCalls++;
+      return { data: createZipBuffer() };
+    }),
   );
-  assert.equal(json[""].language, "fr");
-  assert.equal(json.apple, "pomme");
+  const [firstGlobFn, secondGlobFn] = await Promise.all([
+    getCachedGlobFn(),
+    getCachedGlobFn(),
+  ]);
+
+  assert.equal(cachedCalls, 1);
+  assert.equal(firstGlobFn, secondGlobFn);
+  assert.equal(hasPoFiles(firstGlobFn), true);
+
+  let retryCalls = 0;
+  const getRetryGlobFn = createCachedTranslationsGlobFn(
+    createGithubMock(async () => {
+      if (++retryCalls === 1) throw new Error("temporary outage");
+      return { data: createZipBuffer() };
+    }),
+  );
+  await assert.rejects(() => getRetryGlobFn(), /temporary outage/);
+  const [retryGlobFn, sameRetryGlobFn] = await Promise.all([
+    getRetryGlobFn(),
+    getRetryGlobFn(),
+  ]);
+
+  assert.equal(retryCalls, 2);
+  assert.equal(retryGlobFn, sameRetryGlobFn);
+  assert.equal(hasPoFiles(retryGlobFn), true);
 });
