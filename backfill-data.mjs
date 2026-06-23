@@ -49,6 +49,8 @@ import {
   compressJsonFiles,
   extractExternalTilesets,
   createGlobFn,
+  createCachedTranslationsGlobFn,
+  hasPoFiles,
 } from "./pipeline.mjs";
 
 /** @type {string[]} */
@@ -225,6 +227,9 @@ async function migrate() {
   }
 
   const github = new Octokit({ auth: token });
+  const getTranslationsGlobFn = createCachedTranslationsGlobFn(github, {
+    logMessage: "  📥 Downloading translations from cataclysmbn/translations",
+  });
 
   // Initialize or update the workspace using git worktree
   const worktreeExists = fs.existsSync(DEFAULT_WORKSPACE);
@@ -417,7 +422,10 @@ async function migrate() {
           );
           data = collateRes.data;
         }
-        const langRes = await processLangs(globFn, buildDir, dryRun, data);
+        const langGlobFn = hasPoFiles(globFn)
+          ? globFn
+          : await getTranslationsGlobFn();
+        const langRes = await processLangs(langGlobFn, buildDir, dryRun, data);
         console.log(`    Languages: ${langRes.langs.length}`);
       }
 

@@ -46,7 +46,9 @@ curl -s https://data.cataclysmbn-guide.com/data/2026-01-10/lang/fr.json
 curl -s https://data.cataclysmbn-guide.com/data/2026-01-10/lang/zh_CN_pinyin.json
 ```
 
-Format: [Jed-compatible](https://www.npmjs.com/package/po2json), produced with po2json.
+Format: [Jed-compatible](https://www.npmjs.com/package/po2json), produced with po2json. PO files are read from the
+release source archive when present, or from [cataclysmbn/translations](https://github.com/cataclysmbn/translations)
+when release archives omit them.
 
 ### Get tileset graphics
 
